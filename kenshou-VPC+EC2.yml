@@ -2,6 +2,15 @@ AWSTemplateFormatVersion: '2010-09-09'
 Description:
   VPC & subnet create
 
+Parameters: 
+  KeyName:
+    Description: The EC2 Key Pair to allow SSH access to the instance
+    Type: "AWS::EC2::KeyPair::KeyName"
+
+  MyIP:
+    Description: IP address allowed to access EC2
+    Type: String
+
 Resources:
   KenshouVPC:
     Type: AWS::EC2::VPC
@@ -113,6 +122,41 @@ Resources:
       DestinationCidrBlock: 0.0.0.0/0
       GatewayId: !Ref KenshouIgw
 
+  KenshouInstancePublic1a: 
+    Type: AWS::EC2::Instance
+    Properties: 
+      ImageId: ami-0b7546e839d7ace12
+      KeyName: !Ref KeyName
+      InstanceType: t2.micro
+      NetworkInterfaces: 
+        - AssociatePublicIpAddress: "true"
+          DeviceIndex: "0"
+          SubnetId: !Ref KenshouSubnetPublic1a
+          GroupSet:
+            - !Ref KenshouSgPublic1a
+      UserData: !Base64 |
+        #!/bin/bash
+        sudo yum install -y git 
+      Tags:
+          - Key: Name
+            Value: KenshouInstancePublic1a
+  
+  KenshouSgPublic1a:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupName: KenshouSgPublic1a
+      GroupDescription: Allow SSH and HTTP access only MyIP
+      VpcId: !Ref KenshouVPC
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22
+          CidrIp: !Ref MyIP
+
 Outputs:
   StackVPC:
     Description: The ID of the VPC
@@ -143,3 +187,7 @@ Outputs:
     Value: !Ref KenshouSubnetPrivate1c
     Export:
       Name: !Sub "${AWS::StackName}-PrivateSubnet1C"
+  
+  EC2PublicIP:
+    Value: !GetAtt KenshouInstancePublic1a.PublicIp
+    Description: Public IP of EC2 instance
