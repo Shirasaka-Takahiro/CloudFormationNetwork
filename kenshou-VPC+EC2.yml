@@ -1,0 +1,145 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description:
+  VPC & subnet create
+
+Resources:
+  KenshouVPC:
+    Type: AWS::EC2::VPC
+    Properties:
+      CidrBlock: 10.0.0.0/16
+      EnableDnsSupport: 'true'
+      EnableDnsHostnames: 'true'
+      InstanceTenancy: default
+      Tags:
+      - Key: Name
+        Value: KenshouVPC
+
+  KenshouRtPublic:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref KenshouVPC
+      Tags:
+      - Key: Name
+        Value: KenshouRtPublic
+
+  KenshouRtPrivate:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref KenshouVPC
+      Tags:
+      - Key: Name
+        Value: KenshouRtPrivate
+
+  KenshouSubnetPublic1a:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref KenshouVPC
+      CidrBlock: 10.0.0.0/24
+      AvailabilityZone: "ap-northeast-1a"
+      Tags:
+      - Key: Name
+        Value: KenshouSubnetPublic1a
+
+  KenshouSubnetPublic1aRouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref KenshouSubnetPublic1a
+      RouteTableId: !Ref KenshouRtPublic
+
+  KenshouSubnetPublic1c:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref KenshouVPC
+      CidrBlock: 10.0.2.0/24
+      AvailabilityZone: "ap-northeast-1c"
+      Tags:
+      - Key: Name
+        Value: KenshouSubnetPublic1c
+
+  KenshouSubnetPublic1cRouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref KenshouSubnetPublic1c
+      RouteTableId: !Ref KenshouRtPublic
+
+  KenshouSubnetPrivate1a:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref KenshouVPC
+      CidrBlock: 10.0.1.0/24
+      AvailabilityZone: "ap-northeast-1a"
+      Tags:
+      - Key: Name
+        Value: KenshouSubnetPrivate1a
+
+  KenshouSubnetPrivate1aRouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref KenshouSubnetPrivate1a
+      RouteTableId: !Ref KenshouRtPrivate
+
+  KenshouSubnetPrivate1c:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref KenshouVPC
+      CidrBlock: 10.0.3.0/24
+      AvailabilityZone: "ap-northeast-1c"
+      Tags:
+      - Key: Name
+        Value: KenshouSubnetPrivate1c
+
+  KenshouSubnetPrivate1cRouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref KenshouSubnetPrivate1c
+      RouteTableId: !Ref KenshouRtPrivate
+
+  KenshouIgw:
+    Type: "AWS::EC2::InternetGateway"
+    Properties:
+      Tags:
+      - Key: Name
+        Value: KenshouIgw
+  KenshouAttachGateway:
+    Type: AWS::EC2::VPCGatewayAttachment
+    Properties:
+      VpcId: !Ref KenshouVPC
+      InternetGatewayId: !Ref KenshouIgw
+  KenshouRoutePublic:
+    Type: AWS::EC2::Route
+    DependsOn: KenshouIgw
+    Properties:
+      RouteTableId: !Ref KenshouRtPublic
+      DestinationCidrBlock: 0.0.0.0/0
+      GatewayId: !Ref KenshouIgw
+
+Outputs:
+  StackVPC:
+    Description: The ID of the VPC
+    Value: !Ref KenshouVPC
+    Export:
+      Name: !Sub "${AWS::StackName}-VPCID"
+
+  StackPublicSubnet1A:
+    Description: The ID of the VPC Subnet
+    Value: !Ref KenshouSubnetPublic1a
+    Export:
+      Name: !Sub "${AWS::StackName}-PublicSubnet1A"
+
+  StackPublicSubnet1C:
+    Description: The ID of the VPC Subnet
+    Value: !Ref KenshouSubnetPublic1c
+    Export:
+      Name: !Sub "${AWS::StackName}-PublicSubnet1C"
+
+  StackPrivateSubnet1A:
+    Description: The ID of the VPC Subnet
+    Value: !Ref KenshouSubnetPrivate1a
+    Export:
+      Name: !Sub "${AWS::StackName}-PrivateSubnet1A"
+
+  StackPrivateSubnet1C:
+    Description: The ID of the VPC Subnet
+    Value: !Ref KenshouSubnetPrivate1c
+    Export:
+      Name: !Sub "${AWS::StackName}-PrivateSubnet1C"
