@@ -1,0 +1,259 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description:
+  VPC & subnet create
+
+Parameters: 
+  KeyName:
+    Description: The EC2 Key Pair to allow SSH access to the instance
+    Type: "AWS::EC2::KeyPair::KeyName"
+
+  MyIP:
+    Description: IP address allowed to access EC2
+    Type: String
+
+Resources:
+  KenshouVPC:
+    Type: AWS::EC2::VPC
+    Properties:
+      CidrBlock: 10.0.0.0/16
+      EnableDnsSupport: 'true'
+      EnableDnsHostnames: 'true'
+      InstanceTenancy: default
+      Tags:
+      - Key: Name
+        Value: KenshouVPC
+
+  KenshouRtPublic:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref KenshouVPC
+      Tags:
+      - Key: Name
+        Value: KenshouRtPublic
+
+  KenshouRtPrivate:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref KenshouVPC
+      Tags:
+      - Key: Name
+        Value: KenshouRtPrivate
+
+  KenshouSubnetPublic1a:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref KenshouVPC
+      CidrBlock: 10.0.0.0/24
+      AvailabilityZone: "ap-northeast-1a"
+      Tags:
+      - Key: Name
+        Value: KenshouSubnetPublic1a
+
+  KenshouSubnetPublic1aRouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref KenshouSubnetPublic1a
+      RouteTableId: !Ref KenshouRtPublic
+
+  KenshouSubnetPublic1c:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref KenshouVPC
+      CidrBlock: 10.0.2.0/24
+      AvailabilityZone: "ap-northeast-1c"
+      Tags:
+      - Key: Name
+        Value: KenshouSubnetPublic1c
+
+  KenshouSubnetPublic1cRouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref KenshouSubnetPublic1c
+      RouteTableId: !Ref KenshouRtPublic
+
+  KenshouSubnetPrivate1a:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref KenshouVPC
+      CidrBlock: 10.0.1.0/24
+      AvailabilityZone: "ap-northeast-1a"
+      Tags:
+      - Key: Name
+        Value: KenshouSubnetPrivate1a
+
+  KenshouSubnetPrivate1aRouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref KenshouSubnetPrivate1a
+      RouteTableId: !Ref KenshouRtPrivate
+
+  KenshouSubnetPrivate1c:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref KenshouVPC
+      CidrBlock: 10.0.3.0/24
+      AvailabilityZone: "ap-northeast-1c"
+      Tags:
+      - Key: Name
+        Value: KenshouSubnetPrivate1c
+
+  KenshouSubnetPrivate1cRouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref KenshouSubnetPrivate1c
+      RouteTableId: !Ref KenshouRtPrivate
+
+  KenshouIgw:
+    Type: "AWS::EC2::InternetGateway"
+    Properties:
+      Tags:
+      - Key: Name
+        Value: KenshouIgw
+  KenshouAttachGateway:
+    Type: AWS::EC2::VPCGatewayAttachment
+    Properties:
+      VpcId: !Ref KenshouVPC
+      InternetGatewayId: !Ref KenshouIgw
+  KenshouRoutePublic:
+    Type: AWS::EC2::Route
+    DependsOn: KenshouIgw
+    Properties:
+      RouteTableId: !Ref KenshouRtPublic
+      DestinationCidrBlock: 0.0.0.0/0
+      GatewayId: !Ref KenshouIgw
+
+  #Webインスタンス
+  KenshouInstancePublic1a: 
+    Type: AWS::EC2::Instance
+    Properties: 
+      ImageId: ami-0b7546e839d7ace12
+      KeyName: !Ref KeyName
+      InstanceType: t2.micro
+      NetworkInterfaces: 
+        - AssociatePublicIpAddress: "true"
+          DeviceIndex: "0"
+          SubnetId: !Ref KenshouSubnetPublic1a
+          GroupSet:
+            - !Ref KenshouSgPublic1a
+      UserData: !Base64 |
+        #!/bin/bash
+        yum -y install git
+        yum -y install httpd
+        systemctl start httpd
+        systemctl enable httpd
+        yum -y install php
+      Tags:
+          - Key: Name
+            Value: KenshouInstancePublic1a
+
+  #Webセキュリティグループ
+  KenshouSgPublic1a:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupName: KenshouSgPublic1a
+      GroupDescription: Allow SSH and HTTP access only MyIP
+      VpcId: !Ref KenshouVPC
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: tcp
+          FromPort: 443
+          ToPort: 443
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22
+          CidrIp: !Ref MyIP
+
+  #DBインスタンス
+  KenshouInstancePublic1c: 
+    Type: AWS::EC2::Instance
+    Properties: 
+      ImageId: ami-0b7546e839d7ace12
+      KeyName: !Ref KeyName
+      InstanceType: t2.micro
+      NetworkInterfaces: 
+        - AssociatePublicIpAddress: "true"
+          DeviceIndex: "0"
+          SubnetId: !Ref KenshouSubnetPublic1c
+          GroupSet:
+            - !Ref KenshouSgPublic1c
+      UserData: !Base64 |
+        #!/bin/bash
+        yum -y install git
+        yum -y remove mariadb-libs
+        yum -y remove mysql-community-*
+        rm -rf /var/lib/mysql/
+        yum -y update
+        yum list | grep mysql-community-server
+        yum -y localinstall http://dev.mysql.com/get/mysql80-community-release-el7-5.noarch.rpm
+        yum -y install mysql-community-server
+        yum -y install mysql-community-client
+        systemctl start mysqld.service
+        systemctl enable mysqld.service
+      Tags:
+        - Key: Name
+          Value: KenshouInstancePublic1c
+
+  #DBセキュリティグループ
+  KenshouSgPublic1c:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupName: KenshouSgPublic1c
+      GroupDescription: Allow SSH access only from Apache instance
+      VpcId: !Ref KenshouVPC
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22
+          SourceSecurityGroupId: !Ref KenshouSgPublic1a
+        - IpProtocol: tcp
+          FromPort: 3306
+          ToPort: 3306
+          SourceSecurityGroupId: !Ref KenshouSgPublic1a
+      SecurityGroupEgress:
+        - CidrIp: 0.0.0.0/0
+          IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+        - CidrIp: 0.0.0.0/0
+          IpProtocol: tcp
+          FromPort: 443
+          ToPort: 443
+
+Outputs:
+  StackVPC:
+    Description: The ID of the VPC
+    Value: !Ref KenshouVPC
+    Export:
+      Name: !Sub "${AWS::StackName}-VPCID"
+
+  StackPublicSubnet1A:
+    Description: The ID of the VPC Subnet
+    Value: !Ref KenshouSubnetPublic1a
+    Export:
+      Name: !Sub "${AWS::StackName}-PublicSubnet1A"
+
+  StackPublicSubnet1C:
+    Description: The ID of the VPC Subnet
+    Value: !Ref KenshouSubnetPublic1c
+    Export:
+      Name: !Sub "${AWS::StackName}-PublicSubnet1C"
+
+  StackPrivateSubnet1A:
+    Description: The ID of the VPC Subnet
+    Value: !Ref KenshouSubnetPrivate1a
+    Export:
+      Name: !Sub "${AWS::StackName}-PrivateSubnet1A"
+
+  StackPrivateSubnet1C:
+    Description: The ID of the VPC Subnet
+    Value: !Ref KenshouSubnetPrivate1c
+    Export:
+      Name: !Sub "${AWS::StackName}-PrivateSubnet1C"
+  
+  EC2PublicIP:
+    Value: !GetAtt KenshouInstancePublic1a.PublicIp
+    Description: Public IP of EC2 instance
