@@ -135,13 +135,14 @@ Resources:
           SubnetId: !Ref KenshouSubnetPublic1a
           GroupSet:
             - !Ref KenshouSgPublic1a
-      UserData: !Base64 |
-        #!/bin/bash
-        yum -y install git
-        yum -y install httpd
-        systemctl start httpd
-        systemctl enable httpd
-        yum -y install php
+      UserData:
+        Fn::Base64: |
+          #!/bin/bash
+          yum -y install git
+          yum -y install httpd
+          systemctl start httpd
+          systemctl enable httpd
+          yum -y install php
       Tags:
           - Key: Name
             Value: KenshouInstancePublic1a
@@ -180,19 +181,16 @@ Resources:
           SubnetId: !Ref KenshouSubnetPublic1c
           GroupSet:
             - !Ref KenshouSgPublic1c
-      UserData: !Base64 |
-        #!/bin/bash
-        yum -y install git
-        yum -y remove mariadb-libs
-        yum -y remove mysql-community-*
-        rm -rf /var/lib/mysql/
-        yum -y update
-        yum list | grep mysql-community-server
-        yum -y localinstall http://dev.mysql.com/get/mysql80-community-release-el7-5.noarch.rpm
-        yum -y install mysql-community-server
-        yum -y install mysql-community-client
-        systemctl start mysqld.service
-        systemctl enable mysqld.service
+      UserData: 
+        Fn::Base64: |
+          #!/bin/bash
+          yum -y install git
+          yum -y update
+          yum -y localinstall http://dev.mysql.com/get/mysql80-community-release-el7-5.noarch.rpm
+          yum -y install mysql-community-server
+          yum -y install mysql-community-client
+          systemctl start mysqld.service
+          systemctl enable mysqld.service
       Tags:
         - Key: Name
           Value: KenshouInstancePublic1c
