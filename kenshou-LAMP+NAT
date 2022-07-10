@@ -367,11 +367,11 @@ NatInstanceRole:
           DeviceIndex: "0"
           SubnetId: !Ref PublicSubnetC
           GroupSet: !Ref NatPublicSG
-       UserData:
-         Fn::Base64: !Sub |
-          #!/bin/bash
-          INSTANCEID=$(curl -s -m 60 http://169.254.169.254/latest/meta-data/instance-id)
-          aws --region ap-northeast-1 ec2 modify-instance-attribute --instance-id $INSTANCEID --source-dest-check "{\"Value\": false}"
+        UserData:
+          Fn::Base64: !Sub |
+            #!/bin/bash
+            INSTANCEID=$(curl -s -m 60 http://169.254.169.254/latest/meta-data/instance-id)
+            aws --region ap-northeast-1 ec2 modify-instance-attribute --instance-id $INSTANCEID --source-dest-check "{\"Value\": false}"
       Tags:
           - Key: Name
             Value: !Sub "${PJPrefix}-web-public-nat-1c"
