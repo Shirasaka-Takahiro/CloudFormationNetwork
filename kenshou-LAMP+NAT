@@ -212,7 +212,7 @@ Resources:
     Type: "AWS::EC2::SecurityGroup"
     Properties:
       GroupDescription: web-public-sg
-      GroupName: WebPublicSg
+      GroupName: WebPublicSG
       VpcId: !Ref VPC
       Tags: 
         - Key: Name
@@ -236,7 +236,7 @@ Resources:
     Type: "AWS::EC2::SecurityGroup"
     Properties:
       GroupDescription: nat-public-sg
-      GroupName: NatPublicSg
+      GroupName: NatPublicSG
       VpcId: !Ref VPC
       Tags: 
         - Key: Name
@@ -265,15 +265,15 @@ Resources:
           CidrIp: 0.0.0.0/0
             
 ### DB Server Security Group ###
-  WebPrivateSG:
+  DBPrivateSG:
     Type: "AWS::EC2::SecurityGroup"
     Properties:
-      GroupDescription: web-private-sg
-      GroupName: WebPrivateSg
+      GroupDescription: DB-private-sg
+      GroupName: DBPrivateSG
       VpcId: !Ref VPC
       Tags: 
         - Key: Name
-          Value: !Sub "${PJPrefix}-web-private-sg"
+          Value: !Sub "${PJPrefix}-db-private-sg"
       SecurityGroupIngress:
         - IpProtocol: tcp
           FromPort : 22
@@ -338,7 +338,7 @@ Resources:
         - AssociatePublicIpAddress: "true"
           DeviceIndex: "0"
           SubnetId: !Ref PrivateSubnetA
-          GroupSet: !Ref WebPrivateSG
+          GroupSet: !Ref DBPrivateSG
       UserData:
         Fn::Base64: !Sub |
           #!/bin/bash
@@ -351,4 +351,4 @@ Resources:
           systemctl enable mysqld.service
       Tags:
           - Key: Name
-            Value: !Sub "${PJPrefix}-web-private-1a"
+            Value: !Sub "${PJPrefix}-db-private-1a"
