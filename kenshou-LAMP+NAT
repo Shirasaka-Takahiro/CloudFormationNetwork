@@ -324,7 +324,7 @@ Resources:
           SubnetId: !Ref PublicSubnetC
           GroupSet:
             - !Ref NatPublicSG
-      SourceDestCheck: false
+      SourceDestCheck: "false"
       Tags:
           - Key: Name
             Value: !Sub "${PJPrefix}-web-public-nat-1c"
@@ -337,7 +337,7 @@ Resources:
       InstanceType: t2.micro
       KeyName: !Ref KeyName
       NetworkInterfaces: 
-        - AssociatePublicIpAddress: "true"
+        - AssociatePublicIpAddress: "false"
           DeviceIndex: "0"
           SubnetId: !Ref PrivateSubnetA
           GroupSet:
