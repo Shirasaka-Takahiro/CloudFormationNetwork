@@ -212,7 +212,7 @@ Resources:
       Type: "AWS::EC2::SecurityGroup"
       Properties:
         GroupDescription: web-public-sg
-        GroupName: web-public-sg
+        GroupName: WebPublicSg
         VpcId: !Ref VPC
         Tags: 
           - Key: Name
@@ -236,7 +236,7 @@ Resources:
       Type: "AWS::EC2::SecurityGroup"
       Properties:
         GroupDescription: nat-public-sg
-        GroupName: nat-public-sg
+        GroupName: NatPublicSg
         VpcId: !Ref VPC
         Tags: 
           - Key: Name
@@ -269,7 +269,7 @@ Resources:
       Type: "AWS::EC2::SecurityGroup"
       Properties:
         GroupDescription: web-private-sg
-        GroupName: web-private-sg
+        GroupName: WebPrivateSg
         VpcId: !Ref VPC
         Tags: 
           - Key: Name
