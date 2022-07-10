@@ -34,6 +34,51 @@ Parameters:
   KeyName:
     Description: input EC2 Keyname
     Type: 'AWS::EC2::KeyPair::KeyName'
+    
+# ------------------------------------------------------------
+# IAM Profile
+# ------------------------------------------------------------
+### Nat Instance Profile ###
+NatInstanceProfile:
+  DependsOn:
+    - NatInstanceRole
+  Type: AWS::IAM::InstanceProfile
+  Properties:
+    Roles:
+      - !Ref NatInstanceRole
+
+### Nat Instance Role ###
+NatInstanceRole:
+  Type: AWS::IAM::Role
+  Properties:
+    AssumeRolePolicyDocument:
+      {
+        "Version": "2012-10-17",
+        "Statement": [
+          {
+            "Effect": "Allow",
+            "Principal": {
+              "Service": "ec2.amazonaws.com"
+            },
+            "Action": "sts:AssumeRole"
+          }
+        ]
+      }
+    Policies:
+      -
+        PolicyDocument:
+          {
+            "Version": "2012-10-17",
+            "Statement": [
+              {
+                "Sid": "VisualEditor0",
+                "Effect": "Allow",
+                "Action": "ec2:ModifyInstanceAttribute",
+                "Resource": "*"
+              }
+            ]
+            }
+        PolicyName: allow-modify-instance-attribute
 
 ### Resources ###
 Resources: 
@@ -283,51 +328,6 @@ Resources:
           FromPort : 3306
           ToPort : 3306
           SourceSecurityGroupId: !Ref WebPublicSG
-
-# ------------------------------------------------------------
-# IAM Profile
-# ------------------------------------------------------------
-### Nat Instance Profile ###
-NatInstanceProfile:
-  DependsOn:
-    - NatInstanceRole
-  Type: AWS::IAM::InstanceProfile
-  Properties:
-    Roles:
-      - !Ref NatInstanceRole
-
-### Nat Instance Role ###
-NatInstanceRole:
-  Type: AWS::IAM::Role
-  Properties:
-    AssumeRolePolicyDocument:
-      {
-        "Version": "2012-10-17",
-        "Statement": [
-          {
-            "Effect": "Allow",
-            "Principal": {
-              "Service": "ec2.amazonaws.com"
-            },
-            "Action": "sts:AssumeRole"
-          }
-        ]
-      }
-    Policies:
-      -
-        PolicyDocument:
-          {
-            "Version": "2012-10-17",
-            "Statement": [
-              {
-                "Sid": "VisualEditor0",
-                "Effect": "Allow",
-                "Action": "ec2:ModifyInstanceAttribute",
-                "Resource": "*"
-              }
-            ]
-            }
-        PolicyName: allow-modify-instance-attribute
 
 # ------------------------------------------------------------
 # Instance
