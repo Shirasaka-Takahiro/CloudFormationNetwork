@@ -51,7 +51,6 @@ Resources:
         - Key: Name
           Value: !Sub "${PJPrefix}-vpc"
 
-
 # ------------------------------------------------------------
 # InternetGateway:
 # ------------------------------------------------------------
@@ -114,7 +113,6 @@ Resources:
         - Key: Name
           Value: !Sub "${PJPrefix}-private-subnet-c"
 
-
 # ------------------------------------------------------------
 # RouteTable
 # ------------------------------------------------------------
@@ -127,18 +125,18 @@ Resources:
         - Key: Name
           Value: !Sub "${PJPrefix}-public-route-a"
 
-  PublicASubnetRTBAssociation: 
-    Type: "AWS::EC2::SubnetRouteTableAssociation"
-    Properties: 
-      SubnetId: !Ref PublicSubnetA 
-      RouteTableId: !Ref PublicARTB
-
   PublicARoute: 
     Type: "AWS::EC2::Route"
     Properties: 
       RouteTableId: !Ref PublicARTB
       DestinationCidrBlock: "0.0.0.0/0"
       GatewayId: !Ref InternetGateway
+
+  PublicASubnetRTBAssociation: 
+    Type: "AWS::EC2::SubnetRouteTableAssociation"
+    Properties: 
+      SubnetId: !Ref PublicSubnetA 
+      RouteTableId: !Ref PublicARTB
 
 ### Public Subnet C Routing ###
   PublicCRTB: 
@@ -149,18 +147,18 @@ Resources:
         - Key: Name
           Value: !Sub "${PJPrefix}-public-route-c"
 
-  PublicCSubnetRTBAssociation: 
-    Type: "AWS::EC2::SubnetRouteTableAssociation"
-    Properties: 
-      SubnetId: !Ref PublicSubnetC
-      RouteTableId: !Ref PublicCRTB
-
   PublicCRoute: 
     Type: "AWS::EC2::Route"
     Properties: 
       RouteTableId: !Ref PublicCRTB
       DestinationCidrBlock: "0.0.0.0/0"
       GatewayId: !Ref InternetGateway 
+
+  PublicCSubnetRTBAssociation: 
+    Type: "AWS::EC2::SubnetRouteTableAssociation"
+    Properties: 
+      SubnetId: !Ref PublicSubnetC
+      RouteTableId: !Ref PublicCRTB
 
 ### Private Subnet A Routing ###
   PrivateARTB: 
@@ -182,7 +180,7 @@ Resources:
     Properties: 
       RouteTableId: !Ref PrivateARTB
       DestinationCidrBlock: "0.0.0.0/0"
-      GatewayId: { "Fn::ImportValue": !Sub "${PJPrefix}-web-public-1a" }
+      InstanceId: !Ref EC2PublicNatC
 
 ### Private Subnet C Routing ###
   PrivateCRTB: 
@@ -204,7 +202,7 @@ Resources:
     Properties: 
       RouteTableId: !Ref PrivateCRTB
       DestinationCidrBlock: "0.0.0.0/0"
-
+      InstanceId: !Ref EC2PublicNatC
 
 # ------------------------------------------------------------
 # Security Group
@@ -215,7 +213,7 @@ Resources:
         Properties:
             GroupDescription: "web-public-sg"
             GroupName: cfn-web-public-sg
-            VpcId: { "Fn::ImportValue": !Sub "${PJPrefix}-vpc" }
+            VpcId: !Ref VPC
             Tags: 
                 - Key: Name
                   Value: !Sub "${PJPrefix}-web-public-sg"
@@ -233,12 +231,46 @@ Resources:
                 ToPort : 22
                 CidrIp: !Ref MyIP
 
+### Nat Server Security Group ###
+    NatPublicSG:
+        Type: "AWS::EC2::SecurityGroup"
+        Properties:
+            GroupDescription: "nat-public-sg"
+            GroupName: cfn-nat-public-sg
+            VpcId: !Ref VPC
+            Tags: 
+                - Key: Name
+                  Value: !Sub "${PJPrefix}-nat-public-sg"
+            SecurityGroupIngress:
+              - IpProtocol: tcp
+                FromPort : 80
+                ToPort : 80
+                CidrIp: 0.0.0.0/0
+              - IpProtocol: tcp
+                FromPort : 443
+                ToPort : 443
+                CidrIp: 0.0.0.0/0
+              - IpProtocol: tcp
+                FromPort : 22
+                ToPort : 22
+                CidrIp: !Ref MyIP
+              SecurityGroupEgress:
+              - IpProtocol: tcp
+                FromPort : 80
+                ToPort : 80
+                CidrIp: 0.0.0.0/0
+              - IpProtocol: tcp
+                FromPort : 443
+                ToPort : 443
+                CidrIp: 0.0.0.0/0
+            
+### DB Server Security Group ###
     WebPrivateSG:
         Type: "AWS::EC2::SecurityGroup"
         Properties:
             GroupDescription: "web-private-sg"
             GroupName: cfn-web-private-sg
-            VpcId: { "Fn::ImportValue": !Sub "${PJPrefix}-vpc" }
+            VpcId: !Ref VPC
             Tags: 
                 - Key: Name
                   Value: !Sub "${PJPrefix}-web-private-sg"
@@ -253,10 +285,55 @@ Resources:
                 SourceSecurityGroupId: !Ref WebPublicSG
 
 # ------------------------------------------------------------
+# IAM Profile
+# ------------------------------------------------------------
+### Nat Instance Profile ###
+NatInstanceProfile:
+  DependsOn:
+    - NatInstanceRole
+  Type: AWS::IAM::InstanceProfile
+  Properties:
+    Roles:
+      - !Ref NatInstanceRole
+
+### Nat Instance Role ###
+NatInstanceRole:
+  Type: AWS::IAM::Role
+  Properties:
+    AssumeRolePolicyDocument:
+      {
+        "Version": "2012-10-17",
+        "Statement": [
+          {
+            "Effect": "Allow",
+            "Principal": {
+              "Service": "ec2.amazonaws.com"
+            },
+            "Action": "sts:AssumeRole"
+          }
+        ]
+      }
+    Policies:
+      -
+        PolicyDocument:
+          {
+            "Version": "2012-10-17",
+            "Statement": [
+              {
+                "Sid": "VisualEditor0",
+                "Effect": "Allow",
+                "Action": "ec2:ModifyInstanceAttribute",
+                "Resource": "*"
+              }
+            ]
+            }
+        PolicyName: allow-modify-instance-attribute
+
+# ------------------------------------------------------------
 # Instance
 # ------------------------------------------------------------
 ### Public-Instance-1a ###
-  EC2Public1A: 
+  EC2PublicA: 
     Type: AWS::EC2::Instance
     Properties: 
       ImageId: ami-032d6db78f84e8bf5
@@ -265,9 +342,8 @@ Resources:
       NetworkInterfaces: 
         - AssociatePublicIpAddress: "true"
           DeviceIndex: "0"
-          SubnetId: { "Fn::ImportValue": !Sub "${PJPrefix}-public-subnet-a" }
-          GroupSet:
-            - { "Fn::ImportValue": !Sub "${PJPrefix}-web-public-sg" }
+          SubnetId: !Ref PrivateSubnetA
+          GroupSet: !Ref WebPublicSG
       UserData:
         Fn::Base64: !Sub |
           #!/bin/bash
@@ -279,8 +355,29 @@ Resources:
           - Key: Name
             Value: !Sub "${PJPrefix}-web-public-1a"
 
+### Nat-Instance-1c ###
+  EC2PublicNatC: 
+    Type: AWS::EC2::Instance
+    Properties: 
+      ImageId: ami-00d29e4cb217ae06b
+      InstanceType: t2.micro
+      KeyName: !Ref KeyName
+      NetworkInterfaces: 
+        - AssociatePublicIpAddress: "true"
+          DeviceIndex: "0"
+          SubnetId: !Ref PublicSubnetC
+          GroupSet: !Ref NatPublicSG
+       UserData:
+         Fn::Base64: !Sub |
+          #!/bin/bash
+          INSTANCEID=$(curl -s -m 60 http://169.254.169.254/latest/meta-data/instance-id)
+          aws --region ap-northeast-1 ec2 modify-instance-attribute --instance-id $INSTANCEID --source-dest-check "{\"Value\": false}"
+      Tags:
+          - Key: Name
+            Value: !Sub "${PJPrefix}-web-public-nat-1c"
+
 ### Private-Instance-1a ###
-  EC2Private1A: 
+  EC2PrivateA: 
     Type: AWS::EC2::Instance
     Properties: 
       ImageId: ami-032d6db78f84e8bf5
@@ -289,9 +386,8 @@ Resources:
       NetworkInterfaces: 
         - AssociatePublicIpAddress: "true"
           DeviceIndex: "0"
-          SubnetId: { "Fn::ImportValue": !Sub "${PJPrefix}-private-subnet-a" }
-          GroupSet:
-            - { "Fn::ImportValue": !Sub "${PJPrefix}-web-private-sg" }
+          SubnetId: !Ref PrivateSubnetA
+          GroupSet: !Ref WebPrivateSG
       UserData:
         Fn::Base64: !Sub |
           #!/bin/bash
@@ -305,27 +401,3 @@ Resources:
       Tags:
           - Key: Name
             Value: !Sub "${PJPrefix}-web-private-1a"
-
-### Nat-Instance-1c ###
-  EC2Public1C: 
-    Type: AWS::EC2::Instance
-    Properties: 
-      ImageId: ami-0027bce0a302ff265
-      InstanceType: t2.micro
-      KeyName: !Ref KeyName
-      NetworkInterfaces: 
-        - AssociatePublicIpAddress: "true"
-          DeviceIndex: "0"
-          SubnetId: { "Fn::ImportValue": !Sub "${PJPrefix}-public-subnet-c" }
-          GroupSet:
-            - { "Fn::ImportValue": !Sub "${PJPrefix}-web-public-sg" }
-      UserData:
-        Fn::Base64: !Sub |
-          #!/bin/bash
-          sudo yum -y update
-          sudo yum -y install httpd
-          sudo systemctl start httpd
-          sudo systemctl enable httpd
-      Tags:
-          - Key: Name
-            Value: !Sub "${PJPrefix}-web-public-nat-1c"
