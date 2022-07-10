@@ -297,8 +297,9 @@ Resources:
       NetworkInterfaces: 
         - AssociatePublicIpAddress: "true"
           DeviceIndex: "0"
-          SubnetId: !Ref PrivateSubnetA
-          GroupSet: !Ref WebPublicSG
+          SubnetId: !Ref PublicSubnetA
+          GroupSet: 
+            - !Ref WebPublicSG
       UserData:
         Fn::Base64: !Sub |
           #!/bin/bash
@@ -321,7 +322,8 @@ Resources:
         - AssociatePublicIpAddress: "true"
           DeviceIndex: "0"
           SubnetId: !Ref PublicSubnetC
-          GroupSet: !Ref NatPublicSG
+          GroupSet:
+            - !Ref NatPublicSG
       SourceDestCheck: false
       Tags:
           - Key: Name
@@ -338,7 +340,8 @@ Resources:
         - AssociatePublicIpAddress: "true"
           DeviceIndex: "0"
           SubnetId: !Ref PrivateSubnetA
-          GroupSet: !Ref DBPrivateSG
+          GroupSet:
+            - !Ref DBPrivateSG
       UserData:
         Fn::Base64: !Sub |
           #!/bin/bash
