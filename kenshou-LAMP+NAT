@@ -1,0 +1,331 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: Web-Template-LAMP-NAT-INSTANCE
+
+# ------------------------------------------------------------
+# Input Parameters
+# ------------------------------------------------------------
+Parameters:
+### Project Prefix ###
+  PJPrefix:
+    Type: String
+### VPC ###
+  VPCCIDR:
+    Type: String
+    Default: "10.0.0.0/16"
+### Public Subnet ###
+  PublicSubnetACIDR:
+    Type: String
+    Default: "10.0.10.0/24"
+  PublicSubnetCCIDR:
+    Type: String
+    Default: "10.0.30.0/24"
+### Private Subnet ###
+  PrivateSubnetACIDR:
+    Type: String
+    Default: "10.0.20.0/24"
+  PrivateSubnetCCIDR:
+    Type: String
+    Default: "10.0.30.0/24"
+### MyIP ###
+  MyIP:
+    Description: IP address allowed to access EC2
+    Type: String
+### Key pair ###
+  KeyName:
+    Description: input EC2 Keyname
+    Type: 'AWS::EC2::KeyPair::KeyName'
+
+### Resources ###
+Resources: 
+# ------------------------------------------------------------
+# VPC
+# ------------------------------------------------------------
+  VPC: 
+    Type: "AWS::EC2::VPC"
+    Properties: 
+      CidrBlock: !Ref VPCCIDR
+      EnableDnsSupport: "true"
+      EnableDnsHostnames: "true"
+      InstanceTenancy: default
+      Tags: 
+        - Key: Name
+          Value: !Sub "${PJPrefix}-vpc"
+
+
+# ------------------------------------------------------------
+# InternetGateway:
+# ------------------------------------------------------------
+  InternetGateway: 
+    Type: "AWS::EC2::InternetGateway"
+    Properties: 
+      Tags: 
+        - Key: Name
+          Value: !Sub "${PJPrefix}-igw"
+
+  IGWAttachment: 
+    Type: "AWS::EC2::VPCGatewayAttachment"
+    Properties: 
+      InternetGatewayId: !Ref InternetGateway
+      VpcId: !Ref VPC
+
+
+# ------------------------------------------------------------
+# Subnet
+# ------------------------------------------------------------
+### Public Subnet ###
+  PublicSubnetA: 
+    Type: "AWS::EC2::Subnet"
+    Properties: 
+      AvailabilityZone: "ap-northeast-1a"
+      CidrBlock: !Ref PublicSubnetACIDR
+      VpcId: !Ref VPC 
+      Tags: 
+        - Key: Name
+          Value: !Sub "${PJPrefix}-public-subnet-a"
+
+  PublicSubnetC: 
+    Type: "AWS::EC2::Subnet"
+    Properties: 
+      AvailabilityZone: "ap-northeast-1c"
+      CidrBlock: !Ref PublicSubnetCCIDR
+      VpcId: !Ref VPC 
+      Tags: 
+        - Key: Name
+          Value: !Sub "${PJPrefix}-public-subnet-c"
+
+### Private Subnet ###
+  PrivateSubnetA: 
+    Type: "AWS::EC2::Subnet"
+    Properties: 
+      AvailabilityZone: "ap-northeast-1a"
+      CidrBlock: !Ref PrivateSubnetACIDR
+      VpcId: !Ref VPC 
+      Tags: 
+        - Key: Name
+          Value: !Sub "${PJPrefix}-private-subnet-a"
+
+  PrivateSubnetC: 
+    Type: "AWS::EC2::Subnet"
+    Properties: 
+      AvailabilityZone: "ap-northeast-1c"
+      CidrBlock: !Ref PrivateSubnetCCIDR
+      VpcId: !Ref VPC 
+      Tags: 
+        - Key: Name
+          Value: !Sub "${PJPrefix}-private-subnet-c"
+
+
+# ------------------------------------------------------------
+# RouteTable
+# ------------------------------------------------------------
+### Public Subnet A Routing ###
+  PublicARTB: 
+    Type: "AWS::EC2::RouteTable"
+    Properties: 
+      VpcId: !Ref VPC 
+      Tags: 
+        - Key: Name
+          Value: !Sub "${PJPrefix}-public-route-a"
+
+  PublicASubnetRTBAssociation: 
+    Type: "AWS::EC2::SubnetRouteTableAssociation"
+    Properties: 
+      SubnetId: !Ref PublicSubnetA 
+      RouteTableId: !Ref PublicARTB
+
+  PublicARoute: 
+    Type: "AWS::EC2::Route"
+    Properties: 
+      RouteTableId: !Ref PublicARTB
+      DestinationCidrBlock: "0.0.0.0/0"
+      GatewayId: !Ref InternetGateway
+
+### Public Subnet C Routing ###
+  PublicCRTB: 
+    Type: "AWS::EC2::RouteTable"
+    Properties: 
+      VpcId: !Ref VPC 
+      Tags: 
+        - Key: Name
+          Value: !Sub "${PJPrefix}-public-route-c"
+
+  PublicCSubnetRTBAssociation: 
+    Type: "AWS::EC2::SubnetRouteTableAssociation"
+    Properties: 
+      SubnetId: !Ref PublicSubnetC
+      RouteTableId: !Ref PublicCRTB
+
+  PublicCRoute: 
+    Type: "AWS::EC2::Route"
+    Properties: 
+      RouteTableId: !Ref PublicCRTB
+      DestinationCidrBlock: "0.0.0.0/0"
+      GatewayId: !Ref InternetGateway 
+
+### Private Subnet A Routing ###
+  PrivateARTB: 
+    Type: "AWS::EC2::RouteTable"
+    Properties: 
+      VpcId: !Ref VPC 
+      Tags: 
+        - Key: Name
+          Value: !Sub "${PJPrefix}-private-route-a"
+
+  PrivateSubnetRTBAAssociation: 
+    Type: "AWS::EC2::SubnetRouteTableAssociation"
+    Properties: 
+      SubnetId: !Ref PrivateSubnetA
+      RouteTableId: !Ref PrivateARTB
+
+  PrivateRouteA01: 
+    Type: "AWS::EC2::Route"
+    Properties: 
+      RouteTableId: !Ref PrivateARTB
+      DestinationCidrBlock: "0.0.0.0/0"
+      GatewayId: { "Fn::ImportValue": !Sub "${PJPrefix}-web-public-1a" }
+
+### Private Subnet C Routing ###
+  PrivateCRTB: 
+    Type: "AWS::EC2::RouteTable"
+    Properties: 
+      VpcId: !Ref VPC 
+      Tags: 
+        - Key: Name
+          Value: !Sub "${PJPrefix}-private-route-c"
+
+  PrivateSubnetRTBCAssociation: 
+    Type: "AWS::EC2::SubnetRouteTableAssociation"
+    Properties: 
+      SubnetId: !Ref PrivateSubnetC
+      RouteTableId: !Ref PrivateCRTB
+
+  PrivateRouteC01: 
+    Type: "AWS::EC2::Route"
+    Properties: 
+      RouteTableId: !Ref PrivateCRTB
+      DestinationCidrBlock: "0.0.0.0/0"
+
+
+# ------------------------------------------------------------
+# Security Group
+# ------------------------------------------------------------
+### Web Server Security Group ###
+    WebPublicSG:
+        Type: "AWS::EC2::SecurityGroup"
+        Properties:
+            GroupDescription: "web-public-sg"
+            GroupName: cfn-web-public-sg
+            VpcId: { "Fn::ImportValue": !Sub "${PJPrefix}-vpc" }
+            Tags: 
+                - Key: Name
+                  Value: !Sub "${PJPrefix}-web-public-sg"
+            SecurityGroupIngress:
+              - IpProtocol: tcp
+                FromPort : 80
+                ToPort : 80
+                CidrIp: 0.0.0.0/0
+              - IpProtocol: tcp
+                FromPort : 443
+                ToPort : 443
+                CidrIp: 0.0.0.0/0
+              - IpProtocol: tcp
+                FromPort : 22
+                ToPort : 22
+                CidrIp: !Ref MyIP
+
+    WebPrivateSG:
+        Type: "AWS::EC2::SecurityGroup"
+        Properties:
+            GroupDescription: "web-private-sg"
+            GroupName: cfn-web-private-sg
+            VpcId: { "Fn::ImportValue": !Sub "${PJPrefix}-vpc" }
+            Tags: 
+                - Key: Name
+                  Value: !Sub "${PJPrefix}-web-private-sg"
+            SecurityGroupIngress:
+              - IpProtocol: tcp
+                FromPort : 22
+                ToPort : 22
+                SourceSecurityGroupId: !Ref WebPublicSG
+              - IpProtocol: tcp
+                FromPort : 3306
+                ToPort : 3306
+                SourceSecurityGroupId: !Ref WebPublicSG
+
+# ------------------------------------------------------------
+# Instance
+# ------------------------------------------------------------
+### Public-Instance-1a ###
+  EC2Public1A: 
+    Type: AWS::EC2::Instance
+    Properties: 
+      ImageId: ami-032d6db78f84e8bf5
+      InstanceType: t2.micro
+      KeyName: !Ref KeyName
+      NetworkInterfaces: 
+        - AssociatePublicIpAddress: "true"
+          DeviceIndex: "0"
+          SubnetId: { "Fn::ImportValue": !Sub "${PJPrefix}-public-subnet-a" }
+          GroupSet:
+            - { "Fn::ImportValue": !Sub "${PJPrefix}-web-public-sg" }
+      UserData:
+        Fn::Base64: !Sub |
+          #!/bin/bash
+          sudo yum -y update
+          sudo yum -y install httpd
+          sudo systemctl start httpd
+          sudo systemctl enable httpd
+      Tags:
+          - Key: Name
+            Value: !Sub "${PJPrefix}-web-public-1a"
+
+### Private-Instance-1a ###
+  EC2Private1A: 
+    Type: AWS::EC2::Instance
+    Properties: 
+      ImageId: ami-032d6db78f84e8bf5
+      InstanceType: t2.micro
+      KeyName: !Ref KeyName
+      NetworkInterfaces: 
+        - AssociatePublicIpAddress: "true"
+          DeviceIndex: "0"
+          SubnetId: { "Fn::ImportValue": !Sub "${PJPrefix}-private-subnet-a" }
+          GroupSet:
+            - { "Fn::ImportValue": !Sub "${PJPrefix}-web-private-sg" }
+      UserData:
+        Fn::Base64: !Sub |
+          #!/bin/bash
+          yum -y install git
+          yum -y update
+          yum -y localinstall http://dev.mysql.com/get/mysql80-community-release-el7-5.noarch.rpm
+          yum -y install mysql-community-server
+          yum -y install mysql-community-client
+          systemctl start mysqld.service
+          systemctl enable mysqld.service
+      Tags:
+          - Key: Name
+            Value: !Sub "${PJPrefix}-web-private-1a"
+
+### Nat-Instance-1c ###
+  EC2Public1C: 
+    Type: AWS::EC2::Instance
+    Properties: 
+      ImageId: ami-0027bce0a302ff265
+      InstanceType: t2.micro
+      KeyName: !Ref KeyName
+      NetworkInterfaces: 
+        - AssociatePublicIpAddress: "true"
+          DeviceIndex: "0"
+          SubnetId: { "Fn::ImportValue": !Sub "${PJPrefix}-public-subnet-c" }
+          GroupSet:
+            - { "Fn::ImportValue": !Sub "${PJPrefix}-web-public-sg" }
+      UserData:
+        Fn::Base64: !Sub |
+          #!/bin/bash
+          sudo yum -y update
+          sudo yum -y install httpd
+          sudo systemctl start httpd
+          sudo systemctl enable httpd
+      Tags:
+          - Key: Name
+            Value: !Sub "${PJPrefix}-web-public-nat-1c"
