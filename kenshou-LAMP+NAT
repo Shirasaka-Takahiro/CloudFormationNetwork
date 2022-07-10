@@ -208,81 +208,81 @@ Resources:
 # Security Group
 # ------------------------------------------------------------
 ### Web Server Security Group ###
-    WebPublicSG:
-      Type: "AWS::EC2::SecurityGroup"
-      Properties:
-        GroupDescription: web-public-sg
-        GroupName: WebPublicSg
-        VpcId: !Ref VPC
-        Tags: 
-          - Key: Name
-            Value: !Sub "${PJPrefix}-web-public-sg"
-        SecurityGroupIngress:
-          - IpProtocol: tcp
-            FromPort : 80
-            ToPort : 80
-            CidrIp: 0.0.0.0/0
-          - IpProtocol: tcp
-            FromPort : 443
-            ToPort : 443
-            CidrIp: 0.0.0.0/0
-          - IpProtocol: tcp
-            FromPort : 22
-            ToPort : 22
-            CidrIp: !Ref MyIP
+  WebPublicSG:
+    Type: "AWS::EC2::SecurityGroup"
+    Properties:
+      GroupDescription: web-public-sg
+      GroupName: WebPublicSg
+      VpcId: !Ref VPC
+      Tags: 
+        - Key: Name
+          Value: !Sub "${PJPrefix}-web-public-sg"
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort : 80
+          ToPort : 80
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: tcp
+          FromPort : 443
+          ToPort : 443
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: tcp
+          FromPort : 22
+          ToPort : 22
+          CidrIp: !Ref MyIP
 
 ### Nat Server Security Group ###
-    NatPublicSG:
-      Type: "AWS::EC2::SecurityGroup"
-      Properties:
-        GroupDescription: nat-public-sg
-        GroupName: NatPublicSg
-        VpcId: !Ref VPC
-        Tags: 
-          - Key: Name
-            Value: !Sub "${PJPrefix}-nat-public-sg"
-        SecurityGroupIngress:
-          - IpProtocol: tcp
-            FromPort : 80
-            ToPort : 80
-            CidrIp: 0.0.0.0/0
-          - IpProtocol: tcp
-            FromPort : 443
-            ToPort : 443
-            CidrIp: 0.0.0.0/0
-          - IpProtocol: tcp
-            FromPort : 22
-            ToPort : 22
-            CidrIp: !Ref MyIP
-        SecurityGroupEgress:
-          - IpProtocol: tcp
-            FromPort : 80
-            ToPort : 80
-            CidrIp: 0.0.0.0/0
-          - IpProtocol: tcp
-            FromPort : 443
-            ToPort : 443
-            CidrIp: 0.0.0.0/0
+  NatPublicSG:
+    Type: "AWS::EC2::SecurityGroup"
+    Properties:
+      GroupDescription: nat-public-sg
+      GroupName: NatPublicSg
+      VpcId: !Ref VPC
+      Tags: 
+        - Key: Name
+          Value: !Sub "${PJPrefix}-nat-public-sg"
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort : 80
+          ToPort : 80
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: tcp
+          FromPort : 443
+          ToPort : 443
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: tcp
+          FromPort : 22
+          ToPort : 22
+          CidrIp: !Ref MyIP
+      SecurityGroupEgress:
+        - IpProtocol: tcp
+          FromPort : 80
+          ToPort : 80
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: tcp
+          FromPort : 443
+          ToPort : 443
+          CidrIp: 0.0.0.0/0
             
 ### DB Server Security Group ###
-    WebPrivateSG:
-      Type: "AWS::EC2::SecurityGroup"
-      Properties:
-        GroupDescription: web-private-sg
-        GroupName: WebPrivateSg
-        VpcId: !Ref VPC
-        Tags: 
-          - Key: Name
-            Value: !Sub "${PJPrefix}-web-private-sg"
-        SecurityGroupIngress:
-          - IpProtocol: tcp
-            FromPort : 22
-            ToPort : 22
-            SourceSecurityGroupId: !Ref WebPublicSG
-          - IpProtocol: tcp
-            FromPort : 3306
-            ToPort : 3306
-            SourceSecurityGroupId: !Ref WebPublicSG
+  WebPrivateSG:
+    Type: "AWS::EC2::SecurityGroup"
+    Properties:
+      GroupDescription: web-private-sg
+      GroupName: WebPrivateSg
+      VpcId: !Ref VPC
+      Tags: 
+        - Key: Name
+          Value: !Sub "${PJPrefix}-web-private-sg"
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort : 22
+          ToPort : 22
+          SourceSecurityGroupId: !Ref WebPublicSG
+        - IpProtocol: tcp
+          FromPort : 3306
+          ToPort : 3306
+          SourceSecurityGroupId: !Ref WebPublicSG
 
 # ------------------------------------------------------------
 # IAM Profile
