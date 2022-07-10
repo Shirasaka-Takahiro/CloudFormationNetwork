@@ -219,17 +219,17 @@ Resources:
             Value: !Sub "${PJPrefix}-web-public-sg"
         SecurityGroupIngress:
           - IpProtocol: tcp
-              FromPort : 80
-              ToPort : 80
-              CidrIp: 0.0.0.0/0
+            FromPort : 80
+            ToPort : 80
+            CidrIp: 0.0.0.0/0
           - IpProtocol: tcp
-              FromPort : 443
-              ToPort : 443
-              CidrIp: 0.0.0.0/0
+            FromPort : 443
+            ToPort : 443
+            CidrIp: 0.0.0.0/0
           - IpProtocol: tcp
-              FromPort : 22
-              ToPort : 22
-              CidrIp: !Ref MyIP
+            FromPort : 22
+            ToPort : 22
+            CidrIp: !Ref MyIP
 
 ### Nat Server Security Group ###
     NatPublicSG:
@@ -243,26 +243,26 @@ Resources:
             Value: !Sub "${PJPrefix}-nat-public-sg"
         SecurityGroupIngress:
           - IpProtocol: tcp
-              FromPort : 80
-              ToPort : 80
-              CidrIp: 0.0.0.0/0
+            FromPort : 80
+            ToPort : 80
+            CidrIp: 0.0.0.0/0
           - IpProtocol: tcp
-              FromPort : 443
-              ToPort : 443
-              CidrIp: 0.0.0.0/0
+            FromPort : 443
+            ToPort : 443
+            CidrIp: 0.0.0.0/0
           - IpProtocol: tcp
-              FromPort : 22
-              ToPort : 22
-              CidrIp: !Ref MyIP
+            FromPort : 22
+            ToPort : 22
+            CidrIp: !Ref MyIP
         SecurityGroupEgress:
           - IpProtocol: tcp
-              FromPort : 80
-              ToPort : 80
-              CidrIp: 0.0.0.0/0
+            FromPort : 80
+            ToPort : 80
+            CidrIp: 0.0.0.0/0
           - IpProtocol: tcp
-              FromPort : 443
-              ToPort : 443
-              CidrIp: 0.0.0.0/0
+            FromPort : 443
+            ToPort : 443
+            CidrIp: 0.0.0.0/0
             
 ### DB Server Security Group ###
     WebPrivateSG:
@@ -276,13 +276,13 @@ Resources:
             Value: !Sub "${PJPrefix}-web-private-sg"
         SecurityGroupIngress:
           - IpProtocol: tcp
-              FromPort : 22
-              ToPort : 22
-              SourceSecurityGroupId: !Ref WebPublicSG
+            FromPort : 22
+            ToPort : 22
+            SourceSecurityGroupId: !Ref WebPublicSG
           - IpProtocol: tcp
-              FromPort : 3306
-              ToPort : 3306
-              SourceSecurityGroupId: !Ref WebPublicSG
+            FromPort : 3306
+            ToPort : 3306
+            SourceSecurityGroupId: !Ref WebPublicSG
 
 # ------------------------------------------------------------
 # IAM Profile
