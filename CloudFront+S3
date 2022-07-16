@@ -82,11 +82,11 @@ Resources:
         Origins:
         - CustomOriginConfig:
             OriginProtocolPolicy: http-only
-          DomainName: !Sub "${WebsiteDomainName}.s3-website-${AWS::Region}.amazonaws.com"
+          DomainName: !Sub "${WebsiteDomainName}.s3-website-ap-northeast-1.amazonaws.com"
           Id: !Sub "S3-Website-${WebsiteDomainName}.s3-website-ap-northeast-1.amazonaws.com"
-          Logging: 
-            IncludeCookies: 'false'
-            Bucket: !Ref CFAccessLogBucket
+        Logging:
+          IncludeCookies: 'false'
+          Bucket: !Sub "${WebsiteDomainName}-cf-accesslog-bucket.s3.ap-northeast-1.amazonaws.com"
         DefaultCacheBehavior:
           TargetOriginId: !Sub "S3-Website-${WebsiteDomainName}.s3-website-ap-northeast-1.amazonaws.com"
           ViewerProtocolPolicy: redirect-to-https
