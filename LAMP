@@ -101,7 +101,7 @@ Resources:
         - Key: Name
           Value: !Sub "${PJPrefix}-igw"
 
-  IGWAttachment: 
+  IgwAttachment: 
     Type: "AWS::EC2::VPCGatewayAttachment"
     Properties: 
       InternetGatewayId: !Ref InternetGateway
@@ -275,14 +275,6 @@ Resources:
           Value: !Sub "${PJPrefix}-nat-public-sg"
       SecurityGroupIngress:
         - IpProtocol: tcp
-          FromPort : 80
-          ToPort : 80
-          CidrIp: 0.0.0.0/0
-        - IpProtocol: tcp
-          FromPort : 443
-          ToPort : 443
-          CidrIp: 0.0.0.0/0
-        - IpProtocol: tcp
           FromPort : 22
           ToPort : 22
           CidrIp: !Ref MyIP
@@ -403,7 +395,7 @@ Resources:
           DeviceIndex: "0"
           SubnetId: !Ref PrivateSubnetA
           GroupSet:
-            - !Ref DBPrivateSG
+            - !Ref DbPrivateSG
       UserData:
         Fn::Base64: !Sub |
           #!/bin/bash
