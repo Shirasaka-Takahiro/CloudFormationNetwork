@@ -317,7 +317,7 @@ Resources:
       InstanceType: !Ref WebInstanceClass
       KeyName: !Ref KeyName
       BlockDeviceMappings:
-        - DeviceName: '/dev/sda1'
+        - DeviceName: '/dev/xvda'
           Ebs:
             VolumeSize: !Ref WebStorageSize
       NetworkInterfaces: 
@@ -356,7 +356,7 @@ Resources:
       InstanceType: !Ref NatInstanceClass
       KeyName: !Ref KeyName
       BlockDeviceMappings:
-        - DeviceName: '/dev/sda1'
+        - DeviceName: '/dev/xvda'
           Ebs:
             VolumeSize: !Ref NatStorageSize
       NetworkInterfaces: 
@@ -387,7 +387,7 @@ Resources:
       InstanceType: !Ref DbInstanceClass
       KeyName: !Ref KeyName
       BlockDeviceMappings:
-        - DeviceName: '/dev/sda1'
+        - DeviceName: '/dev/xvda'
           Ebs:
             VolumeSize: !Ref DbStorageSize
       NetworkInterfaces: 
