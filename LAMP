@@ -1,45 +1,88 @@
 AWSTemplateFormatVersion: "2010-09-09"
 Description: Web-Template-LAMP
 
-# ------------------------------------------------------------
 # Input Parameters
-# ------------------------------------------------------------
 Parameters:
 ### Project Prefix ###
   PJPrefix:
     Type: String
+    Description: Project Code
 ### VPC ###
   VPCCIDR:
     Type: String
     Default: "10.0.0.0/16"
+    Description: VPC
 ### Public Subnet ###
   PublicSubnetACIDR:
     Type: String
     Default: "10.0.10.0/24"
+    Description: Public Subnet A
   PublicSubnetCCIDR:
     Type: String
     Default: "10.0.30.0/24"
+    Description: Public Subnet C
 ### Private Subnet ###
   PrivateSubnetACIDR:
     Type: String
     Default: "10.0.20.0/24"
+    Description: Private Subnet A
   PrivateSubnetCCIDR:
     Type: String
     Default: "10.0.40.0/24"
+    Description: Private Subnet C
+### Web Instance ###
+  WebAMI:
+    Type: String
+    Default: ami-0b7546e839d7ace12
+    Description: Web AMI
+  WebInstanceClass:
+    Type: String
+    Default: t3.micro
+    Description: WEB InstanceClass
+  WebStorageSize:
+    Type: String
+    Default: 30
+    Description: WEB Server's Root Volume Storage size
+### Nat Instance ###
+  NatAMI:
+    Type: String
+    Default: ami-0027bce0a302ff265
+    Description: Nat AMI
+  NatInstanceClass:
+    Type: String
+    Default: t3.micro
+    Description: Nat InstanceClass
+  NatStorageSize:
+    Type: String
+    Default: 30
+    Description: Nat Server's Root Volume Storage size
+### Db Instance ###
+  DbAMI:
+    Type: String
+    Default: ami-0b7546e839d7ace12
+    Description: Db AMI
+  DbInstanceClass:
+    Type: String
+    Default: t3.medium
+    Description: Db InstanceClass
+  DbStorageSize:
+    Type: String
+    Default: 50
+    Description: Db Server's Root Volume Storage size
 ### MyIP ###
   MyIP:
     Description: IP address allowed to access EC2
     Type: String
+    Description: IP from My PC
 ### Key pair ###
   KeyName:
     Description: input EC2 Keyname
     Type: 'AWS::EC2::KeyPair::KeyName'
- 
+    Description: Key Pair
+
 ### Resources ###
 Resources: 
-# ------------------------------------------------------------
 # VPC
-# ------------------------------------------------------------
   VPC: 
     Type: "AWS::EC2::VPC"
     Properties: 
@@ -50,10 +93,7 @@ Resources:
       Tags: 
         - Key: Name
           Value: !Sub "${PJPrefix}-vpc"
-
-# ------------------------------------------------------------
-# InternetGateway:
-# ------------------------------------------------------------
+# InternetGateway
   InternetGateway: 
     Type: "AWS::EC2::InternetGateway"
     Properties: 
@@ -66,11 +106,7 @@ Resources:
     Properties: 
       InternetGatewayId: !Ref InternetGateway
       VpcId: !Ref VPC
-
-
-# ------------------------------------------------------------
 # Subnet
-# ------------------------------------------------------------
 ### Public Subnet ###
   PublicSubnetA: 
     Type: "AWS::EC2::Subnet"
@@ -113,9 +149,7 @@ Resources:
         - Key: Name
           Value: !Sub "${PJPrefix}-private-subnet-c"
 
-# ------------------------------------------------------------
 # RouteTable
-# ------------------------------------------------------------
 ### Public Subnet A Routing ###
   PublicRTBA: 
     Type: "AWS::EC2::RouteTable"
@@ -132,7 +166,7 @@ Resources:
       DestinationCidrBlock: "0.0.0.0/0"
       GatewayId: !Ref InternetGateway
 
-  PublicSubnetRTBAAssociation: 
+  PublicSubnetRTBAssociationA: 
     Type: "AWS::EC2::SubnetRouteTableAssociation"
     Properties: 
       SubnetId: !Ref PublicSubnetA 
@@ -154,7 +188,7 @@ Resources:
       DestinationCidrBlock: "0.0.0.0/0"
       GatewayId: !Ref InternetGateway 
 
-  PublicSubnetRTBCAssociation: 
+  PublicSubnetRTBAssociationC: 
     Type: "AWS::EC2::SubnetRouteTableAssociation"
     Properties: 
       SubnetId: !Ref PublicSubnetC
@@ -169,7 +203,7 @@ Resources:
         - Key: Name
           Value: !Sub "${PJPrefix}-private-route-a"
 
-  PrivateSubnetRTBAAssociation: 
+  PrivateSubnetRTBAssociationA: 
     Type: "AWS::EC2::SubnetRouteTableAssociation"
     Properties: 
       SubnetId: !Ref PrivateSubnetA
@@ -180,7 +214,7 @@ Resources:
     Properties: 
       RouteTableId: !Ref PrivateRTBA
       DestinationCidrBlock: "0.0.0.0/0"
-      InstanceId: !Ref EC2PublicNatC
+      InstanceId: !Ref NatInstance1C
 
 ### Private Subnet C Routing ###
   PrivateRTBC: 
@@ -191,7 +225,7 @@ Resources:
         - Key: Name
           Value: !Sub "${PJPrefix}-private-route-c"
 
-  PrivateSubnetRTBCAssociation: 
+  PrivateSubnetRTBAssociationC:
     Type: "AWS::EC2::SubnetRouteTableAssociation"
     Properties: 
       SubnetId: !Ref PrivateSubnetC
@@ -202,11 +236,9 @@ Resources:
     Properties: 
       RouteTableId: !Ref PrivateRTBC
       DestinationCidrBlock: "0.0.0.0/0"
-      InstanceId: !Ref EC2PublicNatC
+      InstanceId: !Ref NatInstance1C
 
-# ------------------------------------------------------------
 # Security Group
-# ------------------------------------------------------------
 ### Web Server Security Group ###
   WebPublicSG:
     Type: "AWS::EC2::SecurityGroup"
@@ -265,15 +297,15 @@ Resources:
           CidrIp: 0.0.0.0/0
             
 ### DB Server Security Group ###
-  RDSPrivateSG:
+  DbPrivateSG:
     Type: "AWS::EC2::SecurityGroup"
     Properties:
-      GroupDescription: RDS-private-sg
-      GroupName: RDSPrivateSG
+      GroupDescription: Db-private-sg
+      GroupName: DbPrivateSG
       VpcId: !Ref VPC
       Tags: 
         - Key: Name
-          Value: !Sub "${PJPrefix}-rds-private-sg"
+          Value: !Sub "${PJPrefix}-db-private-sg"
       SecurityGroupIngress:
         - IpProtocol: tcp
           FromPort : 22
@@ -284,16 +316,18 @@ Resources:
           ToPort : 3306
           SourceSecurityGroupId: !Ref WebPublicSG
 
-# ------------------------------------------------------------
 # Instance
-# ------------------------------------------------------------
-### Public-Instance-public-1a ###
-  EC2PublicA: 
+### Web Instance Public 1a ###
+  WebInstance1A: 
     Type: AWS::EC2::Instance
     Properties: 
-      ImageId: ami-032d6db78f84e8bf5
-      InstanceType: t2.micro
+      ImageId: !Ref WebAMI
+      InstanceType: !Ref WebInstanceClass
       KeyName: !Ref KeyName
+      BlockDeviceMappings:
+        - DeviceName: '/dev/sda1'
+          Ebs:
+            VolumeSize: !Ref WebStorageSize
       NetworkInterfaces: 
         - AssociatePublicIpAddress: "true"
           DeviceIndex: "0"
@@ -303,21 +337,34 @@ Resources:
       UserData:
         Fn::Base64: !Sub |
           #!/bin/bash
-          sudo yum -y update
-          sudo yum -y install httpd
-          sudo systemctl start httpd
-          sudo systemctl enable httpd
+          yum -y update
+          yum -y install httpd
+          systemctl start httpd
+          systemctl enable httpd
       Tags:
           - Key: Name
             Value: !Sub "${PJPrefix}-web-public-1a"
+  WebInstance1AEIP:
+    Type: "AWS::EC2::EIP"
+    Properties:
+      Domain: vpc
+  WebInstance1AEIPAssociation:
+    Type: AWS::EC2::EIPAssociation
+    Properties:
+      InstanceId: !Ref WebInstance1A
+      EIP: !Ref WebInstance1AEIP
 
-### Nat-Instance-public-1c ###
-  EC2PublicNatC: 
+### Nat Instance Public 1c ###
+  NatInstance1C: 
     Type: AWS::EC2::Instance
     Properties: 
-      ImageId: ami-0027bce0a302ff265
-      InstanceType: t2.micro
+      ImageId: !Ref NatAMI
+      InstanceType: !Ref NatInstanceClass
       KeyName: !Ref KeyName
+      BlockDeviceMappings:
+        - DeviceName: '/dev/sda1'
+          Ebs:
+            VolumeSize: !Ref NatStorageSize
       NetworkInterfaces: 
         - AssociatePublicIpAddress: "true"
           DeviceIndex: "0"
@@ -327,15 +374,28 @@ Resources:
       SourceDestCheck: "false"
       Tags:
           - Key: Name
-            Value: !Sub "${PJPrefix}-web-public-nat-1c"
+            Value: !Sub "${PJPrefix}-nat-public-1c"
+  NatInstance1CEIP:
+    Type: "AWS::EC2::EIP"
+    Properties:
+      Domain: vpc
+  NatInstance1CEIPAssociation:
+    Type: AWS::EC2::EIPAssociation
+    Properties:
+      InstanceId: !Ref NatInstance1C
+      EIP: !Ref NatInstance1CEIP
 
-### RDS ###
-  EC2PrivateA: 
+### DB Instance ###
+  DbInsstance1A: 
     Type: AWS::EC2::Instance
     Properties: 
-      ImageId: ami-032d6db78f84e8bf5
-      InstanceType: t2.micro
+      ImageId: !Ref DbAMI
+      InstanceType: !Ref DbInstanceClass
       KeyName: !Ref KeyName
+      BlockDeviceMappings:
+        - DeviceName: '/dev/sda1'
+          Ebs:
+            VolumeSize: !Ref DbStorageSize
       NetworkInterfaces: 
         - AssociatePublicIpAddress: "false"
           DeviceIndex: "0"
