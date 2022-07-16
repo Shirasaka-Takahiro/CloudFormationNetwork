@@ -42,23 +42,23 @@ Resources:
         Status: Enabled
       Tags:
         - Key: Name
-          Value: !Sub "{WebsiteDomainName}"-hosting-bucket
+          Value: !Sub "${WebsiteDomainName}-hosting-bucket"
   S3AcessLogBucket:
     Type: "AWS::S3::Bucket"
     Properties:
-      BucketName: !Sub "{WebsiteDomainName}"-S3-accesslog-bucket
+      BucketName: !Sub "${WebsiteDomainName}-s3-accesslog-bucket"
       AccessControl: LogDeliveryWrite
       Tags:
         - Key: Name
-          Value: !Sub "{WebsiteDomainName}"-S3-accesslog-bucket
+          Value: !Sub "${WebsiteDomainName}-s3-accesslog-bucket"
   CFAccessLogBucket:
     Type: "AWS::S3::Bucket"
     Properties:
-      BucketName: !Sub "{WebsiteDomainName}"-CF-accesslog-bucket
+      BucketName: !Sub "${WebsiteDomainName}-cf-accesslog-bucket"
       AccessControl: LogDeliveryWrite
       Tags:
         - Key: Name
-          Value: !Sub "{WebsiteDomainName}"-CF-accesslog-bucket
+          Value: !Sub "${WebsiteDomainName}-cf-accesslog-bucket"
   
   WebSiteHostingBucketPolicy:
     Type: "AWS::S3::BucketPolicy"
@@ -84,9 +84,9 @@ Resources:
             OriginProtocolPolicy: http-only
           DomainName: !Sub "${WebsiteDomainName}.s3-website-${AWS::Region}.amazonaws.com"
           Id: !Sub "S3-Website-${WebsiteDomainName}.s3-website-ap-northeast-1.amazonaws.com"
-          Logging:
-          IncludeCookies: 'false'
-          Bucket: !Ref CFAccessLogBucket
+          Logging: 
+            IncludeCookies: 'false'
+            Bucket: !Ref CFAccessLogBucket
         DefaultCacheBehavior:
           TargetOriginId: !Sub "S3-Website-${WebsiteDomainName}.s3-website-ap-northeast-1.amazonaws.com"
           ViewerProtocolPolicy: redirect-to-https
