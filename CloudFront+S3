@@ -157,7 +157,7 @@ Resources:
               - cloudfront:CreateInvalidation
             Resource:
               - !Sub "arn:aws:cloudfront::${AWS::AccountId}:distribution/${CloudFrontDistribution}"
-      Users: !Ref IamUserName
+      Users: !Ref IamUser
 
 # IAM User           
   IamUser:
