@@ -17,7 +17,7 @@ Metadata:
       CFSSLCertificateId: 
         default: "CFSSLCertificateId"
 
-# Input Parameters
+#Input Parameters
 Parameters:
   WebsiteDomainName:
     Type: String
@@ -33,7 +33,7 @@ Parameters:
     Default: test-user
 
 Resources:
-# S3 Bucket   
+#S3 Bucket   
   WebSiteHostingBucket:
     Type: "AWS::S3::Bucket"
     Properties:
@@ -77,7 +77,7 @@ Resources:
           Resource: !Sub "arn:aws:s3:::${WebSiteHostingBucket}/*"
           Principal: '*'
 
-# CloudFront
+#CloudFront
   CloudFrontDistribution:
     Type: "AWS::CloudFront::Distribution"
     Properties:
@@ -159,7 +159,7 @@ Resources:
               - !Sub "arn:aws:cloudfront::${AWS::AccountId}:distribution/${CloudFrontDistribution}"
       Users: !Ref IamUser
 
-# IAM User           
+#IAM User           
   IamUser:
     Type: "AWS::IAM::User"
     Properties:
