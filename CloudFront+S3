@@ -127,7 +127,7 @@ Resources:
         Statement:
           - Effect: Allow
             Principal:
-              AWS: !Ref "IamUserArn"
+              AWS: !Ref "User1"
             Action: sts:AssumeRole
             Condition:
               IpAddress:
@@ -179,5 +179,9 @@ Resources:
         Password: !Ref IamUserPassword
         PasswordResetRequired: false
       Policies: 
-        - !Ref PolicyName
+        - !Ref PolicyName 
+      UserName: !Ref IamUserName
+  IAMUserAccessKey:
+    Type: AWS::IAM::AccessKey
+    Properties:
       UserName: !Ref IamUserName
