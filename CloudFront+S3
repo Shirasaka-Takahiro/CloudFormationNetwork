@@ -117,71 +117,57 @@ Resources:
         HttpVersion: http2
         Enabled: true
   
-# IAM Role
-  IamRoleS3access:
-    Type: AWS::IAM::Role
+#IAM Policy
+  IamPolicy1:
+    Type: AWS::IAM::Policy
     Properties:
-      RoleName: !Sub "IAM-role-${WebsiteDomainName}"
-      AssumeRolePolicyDocument:
+      PolicyName: !Sub "S3accessPolicy-${WebsiteDomainName}"
+      PolicyDocument:
         Version: "2012-10-17"
         Statement:
           - Effect: Allow
-            Principal:
-              AWS: !Ref "User1"
-            Action: sts:AssumeRole
-            Condition:
-              IpAddress:
-                aws:SourceIp:
-                  - 0.0.0.0/0
-                  - ::/0
-      Policies:
-        - PolicyName: !Sub "S3accessPolicy-${WebsiteDomainName}"
-          PolicyDocument:
-            Version: "2012-10-17"
-            Statement:
-              - Effect: Allow
-                Action:
-                  - s3:ListAllMyBuckets
-                  - s3:GetBucketLocation
-                Resource:
-                  - arn:aws:s3:::*
-              - Effect: Allow
-                Action:
-                  - s3:*
-                Resource:
-                  - !Sub "arn:aws:s3:::${WebsiteDomainName}/*"
-                  - !Sub "arn:aws:s3:::${WebsiteDomainName}"
-              - Effect: Deny
-                Action:
-                  - s3:PutBucket*
-                  - s3:CreateBucket
-                  - s3:DeleteBucket
-                  - s3:PutObjectAcl
-                  - s3:PutObjectVersionAcl
-                Resource:
-                  - arn:aws:s3:::*
-              - Effect: Allow
-                Action:
-                  - cloudfront:Get*
-                  - cloudfront:List*
-                Resource:
-                  - "*"
-              - Effect: Allow
-                Action:
-                  - cloudfront:CreateInvalidation
-                Resource:
-                  - !Sub "arn:aws:cloudfront::${AWS::AccountId}:distribution/${CloudFrontDistribution}"
+            Action:
+              - s3:ListAllMyBuckets
+              - s3:GetBucketLocation
+            Resource:
+              - arn:aws:s3:::*
+          - Effect: Allow
+            Action:
+              - s3:*
+            Resource:
+              - !Sub "arn:aws:s3:::${WebsiteDomainName}/*"
+              - !Sub "arn:aws:s3:::${WebsiteDomainName}"
+          - Effect: Deny
+            Action:
+              - s3:PutBucket*
+              - s3:CreateBucket
+              - s3:DeleteBucket
+              - s3:PutObjectAcl
+              - s3:PutObjectVersionAcl
+            Resource:
+              - arn:aws:s3:::*
+          - Effect: Allow
+            Action:
+              - cloudfront:Get*
+              - cloudfront:List*
+            Resource:
+              - "*"
+          - Effect: Allow
+            Action:
+              - cloudfront:CreateInvalidation
+            Resource:
+              - !Sub "arn:aws:cloudfront::${AWS::AccountId}:distribution/${CloudFrontDistribution}"
+      Users: !Ref IamUserName
+
 # IAM User           
-  User1:
+  IamUser:
     Type: "AWS::IAM::User"
     Properties:
       LoginProfile:
         Password: !Ref IamUserPassword
         PasswordResetRequired: false
-      Policies: 
-        - !Ref PolicyName 
       UserName: !Ref IamUserName
   IAMUserAccessKey:
     Type: AWS::IAM::AccessKey
     Properties:
-      UserName: !Ref IamUserName
+      UserName: !Ref IamUser
