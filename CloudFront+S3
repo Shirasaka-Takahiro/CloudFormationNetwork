@@ -27,6 +27,10 @@ Parameters:
     Description: IAM user password
     Type: String
     Default: Aaabbbccc1!
+  IamUserName:
+    Description: IAM user name
+    Type: String
+    Default: test-user
 
 Resources:
 # S3 Bucket   
@@ -131,7 +135,7 @@ Resources:
                   - 0.0.0.0/0
                   - ::/0
       Policies:
-        - PolicyName: S3accessPolicy
+        - PolicyName: !Sub "S3accessPolicy-${WebsiteDomainName}"
           PolicyDocument:
             Version: "2012-10-17"
             Statement:
@@ -176,4 +180,4 @@ Resources:
         PasswordResetRequired: false
       Policies: 
         - !Ref PolicyName
-      UserName: test-user
+      UserName: !Ref IamUserName
