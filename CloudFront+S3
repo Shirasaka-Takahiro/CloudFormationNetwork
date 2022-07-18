@@ -116,9 +116,22 @@ Resources:
           AcmCertificateArn: !Sub "arn:aws:acm:us-east-1:${AWS::AccountId}:certificate/${CFSSLCertificateId}"
         HttpVersion: http2
         Enabled: true
-  
+
+#IAM User           
+  IamUser:
+    Type: "AWS::IAM::User"
+    Properties:
+      LoginProfile:
+        Password: !Ref IamUserPassword
+        PasswordResetRequired: false
+      UserName: !Ref IamUserName
+  IAMUserAccessKey:
+    Type: AWS::IAM::AccessKey
+    Properties:
+      UserName: !Ref IamUser
+
 #IAM Policy
-  IamPolicy1:
+  S3AccessPolicy:
     Type: AWS::IAM::Policy
     Properties:
       PolicyName: !Sub "S3accessPolicy-${WebsiteDomainName}"
@@ -157,17 +170,5 @@ Resources:
               - cloudfront:CreateInvalidation
             Resource:
               - !Sub "arn:aws:cloudfront::${AWS::AccountId}:distribution/${CloudFrontDistribution}"
-      Users: !Ref IamUser
-
-#IAM User           
-  IamUser:
-    Type: "AWS::IAM::User"
-    Properties:
-      LoginProfile:
-        Password: !Ref IamUserPassword
-        PasswordResetRequired: false
-      UserName: !Ref IamUserName
-  IAMUserAccessKey:
-    Type: AWS::IAM::AccessKey
-    Properties:
-      UserName: !Ref IamUser
+      Users: 
+        - !Ref IamUser
