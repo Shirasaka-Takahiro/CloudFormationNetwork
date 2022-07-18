@@ -71,7 +71,7 @@ Parameters:
     Default: "db.m4.medium" 
   DBStorageSize:
     Type: String
-    Default: "30"
+    Default: "50"
   DBStorageType:
     Type: String
     Default: "gp2"
@@ -92,7 +92,7 @@ Parameters:
    Description: DB password
 ### AZ options ###
   MultiAZ: 
-    Default: "false"
+    Default: "true
     Type: String
     AllowedValues: [ "true", "false" ]
 ### MyIP ###
@@ -102,7 +102,7 @@ Parameters:
     Description: IP from My PC
 ### Key pair ###
   KeyName:
-    Description: input EC2 Keyname
+    Description: EC2 Keyname
     Type: 'AWS::EC2::KeyPair::KeyName'
     Description: Key Pair
 
@@ -144,7 +144,7 @@ Resources:
       SubnetId: !Ref PublicSubnetA
       Tags:
         - Key: Name
-          Value: !Sub "${PJPrefix}-NAT-Gateway"
+          Value: !Sub "${PJPrefix}-nat-gateway"
 
   NatGatewayEIP:
     Type: AWS::EC2::EIP
@@ -152,7 +152,7 @@ Resources:
       Domain: vpc
       Tags:
         - Key: Name
-          Value: !Sub "${PJPrefix}-NGW-EIP" 
+          Value: !Sub "${PJPrefix}-ngw-eip" 
 
 # Subnet
 ### Public Subnet ###
