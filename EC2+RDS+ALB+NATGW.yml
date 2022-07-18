@@ -284,7 +284,7 @@ Resources:
     Type: "AWS::EC2::SecurityGroup"
     Properties:
       GroupDescription: Bastion-public-sg
-      GroupName: bastion-public-SG
+      GroupName: BastionPublicSG
       VpcId: !Ref VPC
       Tags: 
         - Key: Name
@@ -316,7 +316,7 @@ Resources:
     Type: "AWS::EC2::SecurityGroup"
     Properties:
       GroupDescription: alb-sg
-      GroupName: alb-SG
+      GroupName: AlbSG
       VpcId: !Ref VPC
       Tags: 
         - Key: Name
@@ -336,7 +336,7 @@ Resources:
     Type: "AWS::EC2::SecurityGroup"
     Properties:
       GroupDescription: rds-sg
-      GroupName: rds-SG
+      GroupName: RDSSG
       VpcId: !Ref VPC
       Tags: 
         - Key: Name
@@ -351,7 +351,7 @@ Resources:
     Type: "AWS::EC2::SecurityGroup"
     Properties:
       GroupDescription: efs-sg
-      GroupName: efs-SG
+      GroupName: EFSSG
       VpcId: !Ref VPC
       Tags: 
         - Key: Name
