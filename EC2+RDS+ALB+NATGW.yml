@@ -341,6 +341,7 @@ Resources:
       Tags: 
         - Key: Name
           Value: !Sub "${PJPrefix}-rds-sg"
+      SecurityGroupIngress:
         - IpProtocol: tcp
           FromPort : 3306
           ToPort : 3306
@@ -356,6 +357,7 @@ Resources:
       Tags: 
         - Key: Name
           Value: !Sub "${PJPrefix}-efs-sg"
+      SecurityGroupIngress:
         - IpProtocol: tcp
           FromPort : 2049
           ToPort : 2049
