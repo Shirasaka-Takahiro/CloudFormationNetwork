@@ -129,7 +129,12 @@ Resources:
     Type: AWS::IAM::AccessKey
     Properties:
       UserName: !Ref IamUser
-
+  IAMUser1AccessKeySecret:
+    Type: AWS::SecretsManager::Secret
+    Properties:
+      Name: !Sub ${IAMUser1}-credentials
+      SecretString: !Sub "{\"accessKeyId\":\"${IAMUser1AccessKey}\",\"secretAccessKey\":\"${IAMUser1AccessKey.SecretAccessKey}\"}"
+      
 #IAM Policy
   S3AccessPolicy:
     Type: AWS::IAM::Policy
