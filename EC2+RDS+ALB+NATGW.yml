@@ -90,11 +90,6 @@ Parameters:
     NoEcho: true
     Type: String
    Description: DB password
-### AZ options ###
-  MultiAZ: 
-    Default: "true
-    Type: String
-    AllowedValues: [ "true", "false" ]
 ### MyIP ###
   MyIP:
     Description: IP address allowed to access EC2
@@ -478,7 +473,7 @@ Resources:
       MasterUserPassword: !Ref DBPassword
       DBSubnetGroupName: !Ref DBSubnetGroup
       PubliclyAccessible: false
-      MultiAZ: !Ref MultiAZ
+      MultiAZ: true
       PreferredBackupWindow: "18:00-18:30"
       PreferredMaintenanceWindow: "sat:19:00-sat:19:30"
       AutoMinorVersionUpgrade: false
