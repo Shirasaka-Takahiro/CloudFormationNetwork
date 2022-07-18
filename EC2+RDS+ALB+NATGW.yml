@@ -1,0 +1,487 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: Web-Template-LAMP
+
+# Input Parameters
+Parameters:
+### Project Prefix ###
+  PJPrefix:
+    Type: String
+    Description: Project Code
+### VPC ###
+  VPCCIDR:
+    Type: String
+    Default: "10.0.0.0/16"
+    Description: VPC
+### Public Subnet ###
+  PublicSubnetACIDR:
+    Type: String
+    Default: "10.0.10.0/24"
+    Description: Public Subnet A
+  PublicSubnetCCIDR:
+    Type: String
+    Default: "10.0.30.0/24"
+    Description: Public Subnet C
+### Private Subnet ###
+  PrivateSubnetACIDR:
+    Type: String
+    Default: "10.0.20.0/24"
+    Description: Private Subnet A
+  PrivateSubnetCCIDR:
+    Type: String
+    Default: "10.0.40.0/24"
+    Description: Private Subnet C
+### Bastion Instance ###
+  BastionAMI:
+    Type: String
+    Default: ami-0b7546e839d7ace12
+    Description: Bastion AMI
+  BastionInstanceClass:
+    Type: String
+    Default: t3.micro
+    Description: Bastion InstanceClass
+  BastionStorageSize:
+    Type: String
+    Default: 30
+    Description: Bastion Server's root volume Sorage size
+### Web Instance ###
+  WebAMI:
+    Type: String
+    Default: ami-0b7546e839d7ace12
+    Description: Web AMI
+  WebInstanceClass:
+    Type: String
+    Default: t3.micro
+    Description: WEB InstanceClass
+  WebStorageSize:
+    Type: String
+    Default: 30
+    Description: WEB Server's root volume Sorage size
+### RDS Database type & Major version ###
+  MySQLMajorVersion:
+    Type: String
+    Default: "5.7"
+    AllowedValues: [ "5.5", "5.6", "5.7" ]
+### RDS Database type & Minor version ###
+  MySQLMinorVersion:
+    Type: String
+    Default: "22"
+### Instnce Options ###
+  DBInstanceClass:
+    Type: String
+    Default: "db.m4.medium" 
+  DBStorageSize:
+    Type: String
+    Default: "30"
+  DBStorageType:
+    Type: String
+    Default: "gp2"
+### Database name ###
+  DBName:
+    Type: String
+    Default: "testdb"
+### User Options ###
+  DBMasterUserName:
+    Type: String
+    Default: "root"
+    NoEcho: true
+    Description: DB master user name
+  DBPassword: 
+    Default: "DBPassword"
+    NoEcho: true
+    Type: String
+   Description: DB password
+### AZ options ###
+  MultiAZ: 
+    Default: "false"
+    Type: String
+    AllowedValues: [ "true", "false" ]
+### MyIP ###
+  MyIP:
+    Description: IP address allowed to access EC2
+    Type: String
+    Description: IP from My PC
+### Key pair ###
+  KeyName:
+    Description: input EC2 Keyname
+    Type: 'AWS::EC2::KeyPair::KeyName'
+    Description: Key Pair
+
+### Resources ###
+Resources: 
+# VPC
+  VPC: 
+    Type: "AWS::EC2::VPC"
+    Properties: 
+      CidrBlock: !Ref VPCCIDR
+      EnableDnsSupport: "true"
+      EnableDnsHostnames: "true"
+      InstanceTenancy: default
+      Tags: 
+        - Key: Name
+          Value: !Sub "${PJPrefix}-vpc"
+# Internet Gateway
+  InternetGateway: 
+    Type: "AWS::EC2::InternetGateway"
+    Properties: 
+      Tags: 
+        - Key: Name
+          Value: !Sub "${PJPrefix}-igw"
+
+  IgwAttachment: 
+    Type: "AWS::EC2::VPCGatewayAttachment"
+    Properties: 
+      InternetGatewayId: !Ref InternetGateway
+      VpcId: !Ref VPC
+
+# Nat Gateway
+  NatGateway:
+    Type: AWS::EC2::NatGateway
+    Properties:
+      AllocationId:
+        Fn::GetAtt:
+          - NatGatewayEIP
+          - AllocationId
+      SubnetId: !Ref PublicSubnetA
+      Tags:
+        - Key: Name
+          Value: !Sub "${PJPrefix}-NAT-Gateway"
+
+  NatGatewayEIP:
+    Type: AWS::EC2::EIP
+    Properties:
+      Domain: vpc
+      Tags:
+        - Key: Name
+          Value: !Sub "${PJPrefix}-NGW-EIP" 
+
+# Subnet
+### Public Subnet ###
+  PublicSubnetA: 
+    Type: "AWS::EC2::Subnet"
+    Properties: 
+      AvailabilityZone: "ap-northeast-1a"
+      CidrBlock: !Ref PublicSubnetACIDR
+      VpcId: !Ref VPC 
+      Tags: 
+        - Key: Name
+          Value: !Sub "${PJPrefix}-public-subnet-a"
+
+  PublicSubnetC: 
+    Type: "AWS::EC2::Subnet"
+    Properties: 
+      AvailabilityZone: "ap-northeast-1c"
+      CidrBlock: !Ref PublicSubnetCCIDR
+      VpcId: !Ref VPC 
+      Tags: 
+        - Key: Name
+          Value: !Sub "${PJPrefix}-public-subnet-c"
+
+### Private Subnet ###
+  PrivateSubnetA: 
+    Type: "AWS::EC2::Subnet"
+    Properties: 
+      AvailabilityZone: "ap-northeast-1a"
+      CidrBlock: !Ref PrivateSubnetACIDR
+      VpcId: !Ref VPC 
+      Tags: 
+        - Key: Name
+          Value: !Sub "${PJPrefix}-private-subnet-a"
+
+  PrivateSubnetC: 
+    Type: "AWS::EC2::Subnet"
+    Properties: 
+      AvailabilityZone: "ap-northeast-1c"
+      CidrBlock: !Ref PrivateSubnetCCIDR
+      VpcId: !Ref VPC 
+      Tags: 
+        - Key: Name
+          Value: !Sub "${PJPrefix}-private-subnet-c"
+
+# RouteTable
+### Public Subnet A Routing ###
+  PublicRTBA: 
+    Type: "AWS::EC2::RouteTable"
+    Properties: 
+      VpcId: !Ref VPC 
+      Tags: 
+        - Key: Name
+          Value: !Sub "${PJPrefix}-public-route-a"
+
+  PublicRouteA: 
+    Type: "AWS::EC2::Route"
+    Properties: 
+      RouteTableId: !Ref PublicRTBA
+      DestinationCidrBlock: "0.0.0.0/0"
+      GatewayId: !Ref InternetGateway
+
+  PublicSubnetRTBAssociationA: 
+    Type: "AWS::EC2::SubnetRouteTableAssociation"
+    Properties: 
+      SubnetId: !Ref PublicSubnetA 
+      RouteTableId: !Ref PublicRTBA
+
+### Public Subnet C Routing ###
+  PublicRTBC: 
+    Type: "AWS::EC2::RouteTable"
+    Properties: 
+      VpcId: !Ref VPC 
+      Tags: 
+        - Key: Name
+          Value: !Sub "${PJPrefix}-public-route-c"
+
+  PublicRouteC: 
+    Type: "AWS::EC2::Route"
+    Properties: 
+      RouteTableId: !Ref PublicRTBC
+      DestinationCidrBlock: "0.0.0.0/0"
+      GatewayId: !Ref InternetGateway 
+
+  PublicSubnetRTBAssociationC: 
+    Type: "AWS::EC2::SubnetRouteTableAssociation"
+    Properties: 
+      SubnetId: !Ref PublicSubnetC
+      RouteTableId: !Ref PublicRTBC
+
+### Private Subnet A Routing ###
+  PrivateRTBA: 
+    Type: "AWS::EC2::RouteTable"
+    Properties: 
+      VpcId: !Ref VPC 
+      Tags: 
+        - Key: Name
+          Value: !Sub "${PJPrefix}-private-route-a"
+
+  PrivateSubnetRTBAssociationA: 
+    Type: "AWS::EC2::SubnetRouteTableAssociation"
+    Properties: 
+      SubnetId: !Ref PrivateSubnetA
+      RouteTableId: !Ref PrivateRTBA
+
+  PrivateRouteA: 
+    Type: "AWS::EC2::Route"
+    Properties: 
+      RouteTableId: !Ref PrivateRTBA
+      DestinationCidrBlock: "0.0.0.0/0"
+      NatGatewayId: !Ref NatGateway
+
+### Private Subnet C Routing ###
+  PrivateRTBC: 
+    Type: "AWS::EC2::RouteTable"
+    Properties: 
+      VpcId: !Ref VPC 
+      Tags: 
+        - Key: Name
+          Value: !Sub "${PJPrefix}-private-route-c"
+
+  PrivateSubnetRTBAssociationC:
+    Type: "AWS::EC2::SubnetRouteTableAssociation"
+    Properties: 
+      SubnetId: !Ref PrivateSubnetC
+      RouteTableId: !Ref PrivateRTBC
+
+  PrivateRouteC: 
+    Type: "AWS::EC2::Route"
+    Properties: 
+      RouteTableId: !Ref PrivateRTBC
+      DestinationCidrBlock: "0.0.0.0/0"
+      NatGatewayId: !Ref NatGateway
+
+# Security Group
+### Bastion Server Security Group ###
+  BastionPublicSG:
+    Type: "AWS::EC2::SecurityGroup"
+    Properties:
+      GroupDescription: Bastion-public-sg
+      GroupName: bastion-public-SG
+      VpcId: !Ref VPC
+      Tags: 
+        - Key: Name
+          Value: !Sub "${PJPrefix}-bastion-public-sg"
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort : 22
+          ToPort : 22
+          CidrIp: !Ref MyIP
+
+### Web Server Security Group ###
+  WebPrivateSG:
+    Type: "AWS::EC2::SecurityGroup"
+    Properties:
+      GroupDescription: web-private-sg
+      GroupName: WebPrivateSG
+      VpcId: !Ref VPC
+      Tags: 
+        - Key: Name
+          Value: !Sub "${PJPrefix}-web-private-sg"
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort : 80
+          ToPort : 80
+          CidrIp: 0.0.0.0/0
+
+### ALB Security Group ###
+  AlbPublicSG:
+    Type: "AWS::EC2::SecurityGroup"
+    Properties:
+      GroupDescription: alb-sg
+      GroupName: alb-SG
+      VpcId: !Ref VPC
+      Tags: 
+        - Key: Name
+          Value: !Sub "${PJPrefix}-alb-sg"
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort : 80
+          ToPort : 80
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: tcp
+          FromPort : 443
+          ToPort : 443
+          CidrIp: 0.0.0.0/0
+            
+### RDS Server Security Group ###
+  RDSSG:
+    Type: "AWS::EC2::SecurityGroup"
+    Properties:
+      GroupDescription: rds-sg
+      GroupName: rds-SG
+      VpcId: !Ref VPC
+      Tags: 
+        - Key: Name
+          Value: !Sub "${PJPrefix}-rds-sg"
+        - IpProtocol: tcp
+          FromPort : 3306
+          ToPort : 3306
+          SourceSecurityGroupId: !Ref WebPrivateSG
+
+# Instance
+### Bastion Instance Public 1a ###
+  BastionInstance: 
+    Type: AWS::EC2::Instance
+    Properties: 
+      ImageId: !Ref BastionAMI
+      InstanceType: !Ref BastionInstanceClass
+      KeyName: !Ref KeyName
+      BlockDeviceMappings:
+        - DeviceName: '/dev/xvda'
+          Ebs:
+            VolumeSize: !Ref BastionStorageSize
+      NetworkInterfaces: 
+        - AssociatePublicIpAddress: "true"
+          DeviceIndex: "0"
+          SubnetId: !Ref PublicSubnetA
+          GroupSet: 
+            - !Ref BastionPublicSG
+      Tags:
+          - Key: Name
+            Value: !Sub "${PJPrefix}-bastion-public-1a"
+  BastionInstanceEIP:
+    Type: "AWS::EC2::EIP"
+    Properties:
+      Domain: vpc
+  BastionInstanceEIPAssociation:
+    Type: AWS::EC2::EIPAssociation
+    Properties:
+      InstanceId: !Ref BastionInstance
+      EIP: !Ref BastionInstanceEIP
+
+### Web Instance Public 1a ###
+  WebInstance1A: 
+    Type: AWS::EC2::Instance
+    Properties: 
+      ImageId: !Ref WebAMI
+      InstanceType: !Ref WebInstanceClass
+      KeyName: !Ref KeyName
+      BlockDeviceMappings:
+        - DeviceName: '/dev/xvda'
+          Ebs:
+            VolumeSize: !Ref WebStorageSize
+      NetworkInterfaces: 
+        - AssociatePublicIpAddress: "true"
+          DeviceIndex: "0"
+          SubnetId: !Ref PublicSubnetA
+          GroupSet: 
+            - !Ref WebPublicSG
+      UserData:
+        Fn::Base64: !Sub |
+          #!/bin/bash
+          yum -y update
+          yum -y install httpd
+          systemctl start httpd
+          systemctl enable httpd
+          amazon-linux-extras install php7.4
+          echo "<?php phpinfo(); ?>" > /var/www/html/phpinfo.php 
+      Tags:
+          - Key: Name
+            Value: !Sub "${PJPrefix}-web-public-1a"
+  WebInstance1AEIP:
+    Type: "AWS::EC2::EIP"
+    Properties:
+      Domain: vpc
+  WebInstance1AEIPAssociation:
+    Type: AWS::EC2::EIPAssociation
+    Properties:
+      InstanceId: !Ref WebInstance1A
+      EIP: !Ref WebInstance1AEIP
+
+### Nat Instance Public 1c ###
+  NatInstance1C: 
+    Type: AWS::EC2::Instance
+    Properties: 
+      ImageId: !Ref NatAMI
+      InstanceType: !Ref NatInstanceClass
+      KeyName: !Ref KeyName
+      BlockDeviceMappings:
+        - DeviceName: '/dev/xvda'
+          Ebs:
+            VolumeSize: !Ref NatStorageSize
+      NetworkInterfaces: 
+        - AssociatePublicIpAddress: "true"
+          DeviceIndex: "0"
+          SubnetId: !Ref PublicSubnetC
+          GroupSet:
+            - !Ref NatPublicSG
+      SourceDestCheck: "false"
+      Tags:
+          - Key: Name
+            Value: !Sub "${PJPrefix}-nat-public-1c"
+  NatInstance1CEIP:
+    Type: "AWS::EC2::EIP"
+    Properties:
+      Domain: vpc
+  NatInstance1CEIPAssociation:
+    Type: AWS::EC2::EIPAssociation
+    Properties:
+      InstanceId: !Ref NatInstance1C
+      EIP: !Ref NatInstance1CEIP
+
+### DB Instance ###
+  DbInsstance1A: 
+    Type: AWS::EC2::Instance
+    Properties: 
+      ImageId: !Ref DbAMI
+      InstanceType: !Ref DbInstanceClass
+      KeyName: !Ref KeyName
+      BlockDeviceMappings:
+        - DeviceName: '/dev/xvda'
+          Ebs:
+            VolumeSize: !Ref DbStorageSize
+      NetworkInterfaces: 
+        - AssociatePublicIpAddress: "false"
+          DeviceIndex: "0"
+          SubnetId: !Ref PrivateSubnetA
+          GroupSet:
+            - !Ref DbPrivateSG
+      UserData:
+        Fn::Base64: !Sub |
+          #!/bin/bash
+          yum -y install git
+          yum -y update
+          yum -y localinstall http://dev.mysql.com/get/mysql80-community-release-el7-5.noarch.rpm
+          yum -y install mysql-community-server
+          yum -y install mysql-community-client
+          systemctl start mysqld.service
+          systemctl enable mysqld.service
+      Tags:
+          - Key: Name
+            Value: !Sub "${PJPrefix}-db-private-1a"
