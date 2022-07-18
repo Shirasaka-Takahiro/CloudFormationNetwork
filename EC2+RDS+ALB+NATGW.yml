@@ -150,9 +150,6 @@ Resources:
     Type: AWS::EC2::EIP
     Properties:
       Domain: vpc
-      Tags:
-        - Key: Name
-          Value: !Sub "${PJPrefix}-ngw-eip" 
 
 # Subnet
 ### Public Subnet ###
@@ -354,6 +351,21 @@ Resources:
           ToPort : 3306
           SourceSecurityGroupId: !Ref WebPrivateSG
 
+### EFS Server Security Group ###
+  EFSSG:
+    Type: "AWS::EC2::SecurityGroup"
+    Properties:
+      GroupDescription: efs-sg
+      GroupName: efs-SG
+      VpcId: !Ref VPC
+      Tags: 
+        - Key: Name
+          Value: !Sub "${PJPrefix}-efs-sg"
+        - IpProtocol: tcp
+          FromPort : 2049
+          ToPort : 2049
+          SourceSecurityGroupId: !Ref WebPrivateSG
+
 # Instance
 ### Bastion Instance Public 1a ###
   BastionInstance: 
@@ -553,3 +565,29 @@ Resources:
       LoadBalancerArn: !Ref ALB
       Port: 80
       Protocol: HTTP
+
+### EFS ###
+  FileSystem:
+    Type: "AWS::EFS::FileSystem"
+    Properties:
+      Encrypted: true
+      FileSystemTags: 
+      - Key: "Name"
+        Value: !Sub "${PJPrefix}-efs"
+
+#Mount Target
+  MountTargetA:
+    Type: "AWS::EFS::MountTarget"
+    Properties:
+      FileSystemId: !Ref FileSystem
+      SecurityGroups: 
+      - !Ref EFSSG
+      SubnetId: !Ref PrivateSubnetA
+
+  MountTargetC:
+    Type: "AWS::EFS::MountTarget"
+    Properties:
+      FileSystemId: !Ref FileSystem
+      SecurityGroups: 
+      - !Ref EFSSG
+      SubnetId: !Ref PrivateSubnetC
