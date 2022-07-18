@@ -307,9 +307,9 @@ Resources:
           Value: !Sub "${PJPrefix}-web-private-sg"
       SecurityGroupIngress:
         - IpProtocol: tcp
-          FromPort : 80
-          ToPort : 80
-          CidrIp: 0.0.0.0/0
+          FromPort : 22
+          ToPort : 22
+          SourceSecurityGroupId: !Ref BastionPublicSG
 
 ### ALB Security Group ###
   AlbSG:
@@ -412,17 +412,24 @@ Resources:
           GroupSet: 
             - !Ref WebPrivateSG
       UserData:
-        Fn::Base64: !Sub |
-          #!/bin/bash
-          yum -y update
-          yum -y install httpd amazon-efs-utils
-          systemctl start httpd
-          systemctl enable httpd
-          amazon-linux-extras install php7.4
-          echo "<?php phpinfo(); ?>" > /var/www/html/phpinfo.php
-          mkdir /mnt/share
-          echo !Ref ElasticFS :/ /mnt/share efs defaults,_netdev 0 0 >> /etc/fstab
-          mount -a
+        Fn::Base64: !Join [
+          "",
+          [
+          "#!/bin/bash\n",
+          "yum -y update\n",
+          "yum -y install httpd amazon-efs-utils\n",
+          "systemctl start httpd\n",
+          "systemctl enable httpd\n",
+          "amazon-linux-extras install php7.4\n",
+          "echo "<?php phpinfo(); ?>" > /var/www/html/phpinfo.php\n",
+          "mkdir /mnt/share\n",
+          "echo ",
+          !Ref ElasticFS,
+          ":/ /mnt/share efs defaults,_netdev 0 0 >>\n",
+          "/etc/fstab\n",
+          "mount -a"
+          ]
+        ]
       Tags:
           - Key: Name
             Value: !Sub "${PJPrefix}-web-private-1a"
@@ -445,17 +452,24 @@ Resources:
           GroupSet: 
             - !Ref WebPrivateSG
       UserData:
-        Fn::Base64: !Sub |
-          #!/bin/bash
-          yum -y update
-          yum -y install httpd amazon-efs-utils
-          systemctl start httpd
-          systemctl enable httpd
-          amazon-linux-extras install php7.4
-          echo "<?php phpinfo(); ?>" > /var/www/html/phpinfo.php
-          mkdir /mnt/share
-          echo !Ref ElasticFS :/ /mnt/share efs defaults,_netdev 0 0 >> /etc/fstab
-          mount -a
+        Fn::Base64: !Join [
+          "",
+          [
+          "#!/bin/bash\n",
+          "yum -y update\n",
+          "yum -y install httpd amazon-efs-utils\n",
+          "systemctl start httpd\n",
+          "systemctl enable httpd\n",
+          "amazon-linux-extras install php7.4\n",
+          "echo "<?php phpinfo(); ?>" > /var/www/html/phpinfo.php\n",
+          "mkdir /mnt/share\n",
+          "echo ",
+          !Ref ElasticFS,
+          ":/ /mnt/share efs defaults,_netdev 0 0 >>\n",
+          "/etc/fstab\n",
+          "mount -a"
+          ]
+        ]
       Tags:
           - Key: Name
             Value: !Sub "${PJPrefix}-web-private-1c"
