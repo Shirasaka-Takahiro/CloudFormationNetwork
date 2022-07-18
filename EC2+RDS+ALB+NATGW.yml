@@ -418,11 +418,14 @@ Resources:
         Fn::Base64: !Sub |
           #!/bin/bash
           yum -y update
-          yum -y install httpd
+          yum -y install httpd amazon-efs-utils
           systemctl start httpd
           systemctl enable httpd
           amazon-linux-extras install php7.4
-          echo "<?php phpinfo(); ?>" > /var/www/html/phpinfo.php 
+          echo "<?php phpinfo(); ?>" > /var/www/html/phpinfo.php
+          mkdir /mnt/share
+          echo !Ref ElasticFS :/ /mnt/share efs defaults,_netdev 0 0 >> /etc/fstab
+          mount -a
       Tags:
           - Key: Name
             Value: !Sub "${PJPrefix}-web-private-1a"
@@ -448,11 +451,14 @@ Resources:
         Fn::Base64: !Sub |
           #!/bin/bash
           yum -y update
-          yum -y install httpd
+          yum -y install httpd amazon-efs-utils
           systemctl start httpd
           systemctl enable httpd
           amazon-linux-extras install php7.4
-          echo "<?php phpinfo(); ?>" > /var/www/html/phpinfo.php 
+          echo "<?php phpinfo(); ?>" > /var/www/html/phpinfo.php
+          mkdir /mnt/share
+          echo !Ref ElasticFS :/ /mnt/share efs defaults,_netdev 0 0 >> /etc/fstab
+          mount -a
       Tags:
           - Key: Name
             Value: !Sub "${PJPrefix}-web-private-1c"
