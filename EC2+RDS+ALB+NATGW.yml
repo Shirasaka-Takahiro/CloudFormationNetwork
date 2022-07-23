@@ -486,7 +486,7 @@ Resources:
   DBInstance: 
     Type: "AWS::RDS::DBInstance"
     Properties: 
-      DBInstanceIdentifier: !Sub "${PJPrefix}-${DBInstanceName}"
+      DBInstanceIdentifier: !Sub "${PJPrefix}-${DBName}"
       Engine: MySQL
       EngineVersion: !Sub "${MySQLMajorVersion}.${MySQLMinorVersion}"
       DBInstanceClass: !Ref DBInstanceClass
@@ -522,7 +522,7 @@ Resources:
   DBSubnetGroup: 
     Type: "AWS::RDS::DBSubnetGroup"
     Properties: 
-      DBSubnetGroupName: !Sub "${PJPrefix}-${DBInstanceName}-subnet-group"
+      DBSubnetGroupName: !Sub "${PJPrefix}-${DBName}-subnet-group"
       DBSubnetGroupDescription: "-"
       SubnetIds: 
         - !Sub PrivateSubnetA
