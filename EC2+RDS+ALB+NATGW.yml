@@ -68,7 +68,7 @@ Parameters:
 ### Instnce Options ###
   DBInstanceClass:
     Type: String
-    Default: "db.m4.medium" 
+    Default: "db.m4.large" 
   DBStorageSize:
     Type: String
     Default: "50"
