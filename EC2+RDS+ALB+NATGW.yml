@@ -525,8 +525,8 @@ Resources:
       DBSubnetGroupName: !Sub "${PJPrefix}-${DBName}-subnet-group"
       DBSubnetGroupDescription: "-"
       SubnetIds: 
-        - !Sub PrivateSubnetA
-        - !Sub PrivateSubnetC
+        - !Ref PrivateSubnetA
+        - !Ref PrivateSubnetC
 
 # Target Group
   TargetGroup:
