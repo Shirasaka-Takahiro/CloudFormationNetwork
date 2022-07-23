@@ -89,7 +89,7 @@ Parameters:
     Default: "DBPassword"
     NoEcho: true
     Type: String
-   Description: DB password
+    Description: DB password
 ### MyIP ###
   MyIP:
     Description: IP address allowed to access EC2
@@ -430,7 +430,8 @@ Resources:
           !Ref FileSystem,
           ":/ /mnt/share efs defaults,_netdev 0 0 >>\n",
           "/etc/fstab\n",
-          "mount -a"
+          "mount -a\n",
+          "touch /healthcheck.html"
           ]
         ]
       Tags:
@@ -473,7 +474,8 @@ Resources:
           !Ref FileSystem,
           ":/ /mnt/share efs defaults,_netdev 0 0 >>\n",
           "/etc/fstab\n",
-          "mount -a"
+          "mount -a\n",
+          "touch /healthcheck.html"
           ]
         ]
       Tags:
@@ -488,8 +490,8 @@ Resources:
       Engine: MySQL
       EngineVersion: !Sub "${MySQLMajorVersion}.${MySQLMinorVersion}"
       DBInstanceClass: !Ref DBInstanceClass
-      AllocatedStorage: !Ref DBInstanceStorageSize
-      StorageType: !Ref DBInstanceStorageType
+      AllocatedStorage: !Ref DBStorageSize
+      StorageType: !Ref DBStorageType
       DBName: !Ref DBName
       MasterUsername: !Ref DBMasterUserName
       MasterUserPassword: !Ref DBPassword
@@ -535,7 +537,7 @@ Resources:
       Protocol: HTTP
       Port: 80
       HealthCheckProtocol: HTTP
-      HealthCheckPath: "/"
+      HealthCheckPath: "/healthcheck.html"
       HealthCheckPort: "traffic-port"
       HealthyThresholdCount: 2
       UnhealthyThresholdCount: 2
