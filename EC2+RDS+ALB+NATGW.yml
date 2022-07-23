@@ -508,7 +508,7 @@ Resources:
       BackupRetentionPeriod: 7
       Tags: 
         - Key: "Name"
-          Value: !Ref DBInstanceName
+          Value: !Ref DBName
     DeletionPolicy: "Delete"
 
 # DBParameterGroup
