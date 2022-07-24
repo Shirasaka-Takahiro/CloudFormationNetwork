@@ -310,6 +310,11 @@ Resources:
           FromPort : 22
           ToPort : 22
           SourceSecurityGroupId: !Ref BastionPublicSG
+      SecurityGroupEgress:
+        - IpProtocol: tcp
+          FromPort : 0
+          ToPort : 65535
+          CidrIp: 0.0.0.0/0
 
 ### ALB Security Group ###
   AlbSG:
