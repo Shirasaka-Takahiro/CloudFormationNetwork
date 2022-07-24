@@ -382,7 +382,7 @@ Resources:
         - IpProtocol: tcp
           FromPort: 0
           ToPort: 65535
-          SourceSecurityGroupId: !Ref VPCCIDR
+          CidrIp: !Ref VPC
 
 # Instance
 ### Bastion Instance Public 1a ###
