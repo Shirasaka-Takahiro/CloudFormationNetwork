@@ -350,7 +350,7 @@ Resources:
           Ebs:
             VolumeSize: !Ref WebStorageSize
       NetworkInterfaces: 
-        - AssociatePublicIpAddress: "false"
+        - AssociatePublicIpAddress: "true"
           DeviceIndex: "0"
           SubnetId: !Ref PublicSubnetA
           GroupSet: 
@@ -383,6 +383,15 @@ Resources:
       Tags:
           - Key: Name
             Value: !Sub "${PJPrefix}-web-public-1a"
+  WebInstance1AEIP:
+    Type: "AWS::EC2::EIP"
+    Properties:
+      Domain: vpc
+  WebInstance1AEIPAssociation:
+    Type: AWS::EC2::EIPAssociation
+    Properties:
+      InstanceId: !Ref WebInstance1A
+      EIP: !Ref WebInstance1AEIP
 
 ### Web Instance private 1c ###
   WebInstance1C: 
@@ -397,7 +406,7 @@ Resources:
           Ebs:
             VolumeSize: !Ref WebStorageSize
       NetworkInterfaces: 
-        - AssociatePublicIpAddress: "false"
+        - AssociatePublicIpAddress: "true"
           DeviceIndex: "0"
           SubnetId: !Ref PublicSubnetC
           GroupSet: 
@@ -430,6 +439,15 @@ Resources:
       Tags:
           - Key: Name
             Value: !Sub "${PJPrefix}-web-Public-1c"
+  WebInstance1CEIP:
+    Type: "AWS::EC2::EIP"
+    Properties:
+      Domain: vpc
+  WebInstance1CEIPAssociation:
+    Type: AWS::EC2::EIPAssociation
+    Properties:
+      InstanceId: !Ref WebInstance1C
+      EIP: !Ref WebInstance1CSEIP
 
 ### RDS Instance ###
   DBInstance: 
@@ -541,6 +559,77 @@ Resources:
       Protocol: HTTP      
       Port: 443
       Protocol: HTTPS
+
+### Launch Template ###
+  WebInstanceLaunchTemplate:
+    Type: AWS::EC2::LaunchTemplate
+    Properties:
+      LaunchTemplateName: !Sub "${PJPrefix}-web-instance-template"
+      LaunchTemplateData:
+        TagSpecifications:
+        - ResourceType: instance
+          Tags:
+          - Key: Name
+            Value: !Sub "${PJPrefix}-web-instance"
+      ImageId: !Ref WebAMI
+      InstanceType: !Ref WebInstanceClass
+      KeyName: !Ref KeyName
+      BlockDeviceMappings:
+        - DeviceName: '/dev/xvda'
+          Ebs:
+            VolumeSize: !Ref WebStorageSize
+      NetworkInterfaces: 
+        - AssociatePublicIpAddress: "true"
+          DeviceIndex: "0"
+          GroupSet: 
+            - !Ref WebPublicSG
+            - !Ref InternalSG
+      UserData:
+        Fn::Base64: !Join [
+          "",
+          [
+          "#!/bin/bash\n",
+          "yum -y update\n",
+          "yum -y install httpd\n",
+          "systemctl start httpd\n",
+          "systemctl enable httpd\n",
+          "amazon-linux-extras install php7.4\n",
+          "echo '<?php phpinfo(); ?>' > /var/www/html/phpinfo.php\n",
+          "yum -y install amazon-efs-utils\n",
+          "mkdir /mnt/share\n",
+          "mount -t nfs4 -o nfsvers=4.1,rsize=1048576,wsize=1048576,hard,timeo=600,retrans=2 ",
+          !Ref EFS,
+          ".efs.ap-northeast-1.amazonaws.com:/ /mnt/share\n",
+          "echo ",
+          !Ref EFS,
+          ":/ /mnt/share efs defaults,_netdev 0 0 >> ",
+          "/etc/fstab\n",
+          "mount -a\n",
+          "touch /var/www/html/healthcheck.html"
+          ]
+        ]
+
+  AutoScalingGroup:
+    Type: AWS::AutoScaling::AutoScalingGroup
+    Properties:
+      AutoScalingGroupName: !Sub "${PJPrefix}-autoscalinggroup"
+      VPCZoneIdentifier:
+        - !Ref PublicSubnetA
+        - !Ref PublicSubnetC
+      LaunchTemplate:
+        LaunchTemplateId: !Ref WebInstanceLaunchTemplate
+        Version: !GetAtt 'WebInstanceLaunchTemplate.LatestVersionNumber'
+      TargetGroupARNs:
+        - !Ref TargetGroup
+      TerminationPolicies:
+        - NewestInstance
+      DesiredCapacity: 2
+      MaxSize: 5
+      MinSize: 1
+      Tags:
+        - Key: Name
+          Value: !Sub !Sub "${PJPrefix}-web-public-autoscalinggroup"
+          PropagateAtLaunch: true
 
 ### EFS ###
   EFS:
