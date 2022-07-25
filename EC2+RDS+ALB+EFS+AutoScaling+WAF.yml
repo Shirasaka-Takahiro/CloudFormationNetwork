@@ -78,6 +78,16 @@ Parameters:
     NoEcho: true
     Type: String
     Description: DB password
+### ACM Certificate ###
+  ACMCertificateID:
+    Type: String
+    Default: Default: arn:aws:acm:us-east-1:{AWS::AccountId}:certificate/{SSLCertificateId}
+    Description: ACM Certificate ID
+### ALB SSL Listener Policy ###
+  ALBSSLPolicy:
+    Type: String
+    Default: ELBSecurityPolicy-2016-08
+    Description: ALB SSL Listener Policy
 ### MyIP ###
   MyIP:
     Description: IP address allowed to access EC2
@@ -530,14 +540,28 @@ Resources:
   ALBListenerHTTP: 
     Type: "AWS::ElasticLoadBalancingV2::Listener"
     Properties:
-      DefaultActions: 
-        - TargetGroupArn: !Ref TargetGroup
-          Type: forward
+      DefaultActions:
+        - RedirectConfig:
+            Port: 443
+            Protocol: HTTPS
+            StatusCode: HTTP_301
+          Type: redirect
       LoadBalancerArn: !Ref ALB
       Port: 80
       Protocol: HTTP      
+  
+  ALBListenerHTTPS:
+    Type: "AWS::ElasticLoadBalancingV2::Listener"
+    Properties:
+      Certificates:
+        - CertificateArn: !Ref ACMCertificateID
+      DefaultActions:
+        - TargetGroupArn: !Ref TargetGroup
+          Type: forward
+      LoadBalancerArn: !Ref ALB
       Port: 443
       Protocol: HTTPS
+      SslPolicy: !Ref ALBSSLPolicy
 
 ### Launch Template ###
   WebInstanceLaunchTemplate:
