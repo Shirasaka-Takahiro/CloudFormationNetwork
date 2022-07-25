@@ -447,7 +447,7 @@ Resources:
     Type: AWS::EC2::EIPAssociation
     Properties:
       InstanceId: !Ref WebInstance1C
-      EIP: !Ref WebInstance1CSEIP
+      EIP: !Ref WebInstance1CEIP
 
 ### RDS Instance ###
   DBInstance: 
@@ -628,7 +628,7 @@ Resources:
       MinSize: 1
       Tags:
         - Key: Name
-          Value: !Sub !Sub "${PJPrefix}-web-public-autoscalinggroup"
+          Value: !Sub "${PJPrefix}-web-public-autoscalinggroup"
           PropagateAtLaunch: true
 
 ### EFS ###
