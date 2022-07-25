@@ -13,20 +13,20 @@ Parameters:
     Default: "10.0.0.0/16"
     Description: VPC
 ### Public Subnet ###
-  PublicSubnetACIDR:
+  PublicSubnetCIDRA:
     Type: String
     Default: "10.0.10.0/24"
     Description: Public Subnet A
-  PublicSubnetCCIDR:
+  PublicSubnetCIDRC:
     Type: String
     Default: "10.0.30.0/24"
     Description: Public Subnet C
 ### Private Subnet ###
-  PrivateSubnetACIDR:
+  PrivateSubnetCIDRA:
     Type: String
     Default: "10.0.20.0/24"
     Description: Private Subnet A
-  PrivateSubnetCCIDR:
+  PrivateSubnetCIDRC:
     Type: String
     Default: "10.0.40.0/24"
     Description: Private Subnet C
@@ -152,7 +152,7 @@ Resources:
     Type: "AWS::EC2::Subnet"
     Properties: 
       AvailabilityZone: "ap-northeast-1a"
-      CidrBlock: !Ref PublicSubnetACIDR
+      CidrBlock: !Ref PublicSubnetCIDRA
       VpcId: !Ref VPC 
       Tags: 
         - Key: Name
@@ -162,7 +162,7 @@ Resources:
     Type: "AWS::EC2::Subnet"
     Properties: 
       AvailabilityZone: "ap-northeast-1c"
-      CidrBlock: !Ref PublicSubnetCCIDR
+      CidrBlock: !Ref PublicSubnetCIDRC
       VpcId: !Ref VPC 
       Tags: 
         - Key: Name
@@ -173,7 +173,7 @@ Resources:
     Type: "AWS::EC2::Subnet"
     Properties: 
       AvailabilityZone: "ap-northeast-1a"
-      CidrBlock: !Ref PrivateSubnetACIDR
+      CidrBlock: !Ref PrivateSubnetCIDRA
       VpcId: !Ref VPC 
       Tags: 
         - Key: Name
@@ -183,7 +183,7 @@ Resources:
     Type: "AWS::EC2::Subnet"
     Properties: 
       AvailabilityZone: "ap-northeast-1c"
-      CidrBlock: !Ref PrivateSubnetCCIDR
+      CidrBlock: !Ref PrivateSubnetCIDRC
       VpcId: !Ref VPC 
       Tags: 
         - Key: Name
@@ -310,12 +310,7 @@ Resources:
           FromPort : 22
           ToPort : 22
           SourceSecurityGroupId: !Ref BastionPublicSG
-      SecurityGroupEgress:
-        - IpProtocol: tcp
-          FromPort : 0
-          ToPort : 65535
-          CidrIp: 0.0.0.0/0
-
+      
 ### ALB Security Group ###
   AlbSG:
     Type: "AWS::EC2::SecurityGroup"
@@ -323,7 +318,7 @@ Resources:
       GroupDescription: alb-sg
       GroupName: AlbSG
       VpcId: !Ref VPC
-      Tags: 
+      Tags:
         - Key: Name
           Value: !Sub "${PJPrefix}-alb-sg"
       SecurityGroupIngress:
@@ -449,10 +444,10 @@ Resources:
           "yum -y install amazon-efs-utils\n",
           "mkdir /mnt/share\n",
           "mount -t nfs4 -o nfsvers=4.1,rsize=1048576,wsize=1048576,hard,timeo=600,retrans=2 ",
-          !Ref FileSystem,
+          !Ref EFS,
           ".efs.ap-northeast-1.amazonaws.com:/ /mnt/share\n",
           "echo ",
-          !Ref FileSystem,
+          !Ref EFS,
           ":/ /mnt/share efs defaults,_netdev 0 0 >> ",
           "/etc/fstab\n",
           "mount -a\n",
@@ -466,6 +461,7 @@ Resources:
 ### Web Instance private 1c ###
   WebInstance1C: 
     Type: AWS::EC2::Instance
+    DependsOn: NatGateway
     Properties: 
       ImageId: !Ref WebAMI
       InstanceType: !Ref WebInstanceClass
@@ -495,10 +491,10 @@ Resources:
           "yum -y install amazon-efs-utils\n",
           "mkdir /mnt/share\n",
           "mount -t nfs4 -o nfsvers=4.1,rsize=1048576,wsize=1048576,hard,timeo=600,retrans=2 ",
-          !Ref FileSystem,
+          !Ref EFS,
           ".efs.ap-northeast-1.amazonaws.com:/ /mnt/share\n",
           "echo ",
-          !Ref FileSystem,
+          !Ref EFS,
           ":/ /mnt/share efs defaults,_netdev 0 0 >> ",
           "/etc/fstab\n",
           "mount -a\n",
@@ -619,7 +615,7 @@ Resources:
       Protocol: HTTP
 
 ### EFS ###
-  FileSystem:
+  EFS:
     Type: "AWS::EFS::FileSystem"
     Properties:
       Encrypted: true
@@ -631,7 +627,7 @@ Resources:
   MountTargetA:
     Type: "AWS::EFS::MountTarget"
     Properties:
-      FileSystemId: !Ref FileSystem
+      FileSystemId: !Ref EFS
       SecurityGroups: 
       - !Ref EFSSG
       SubnetId: !Ref PrivateSubnetA
@@ -639,7 +635,7 @@ Resources:
   MountTargetC:
     Type: "AWS::EFS::MountTarget"
     Properties:
-      FileSystemId: !Ref FileSystem
+      FileSystemId: !Ref EFS
       SecurityGroups: 
       - !Ref EFSSG
       SubnetId: !Ref PrivateSubnetC
