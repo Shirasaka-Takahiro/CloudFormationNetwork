@@ -196,6 +196,7 @@ Resources:
     Properties: 
       RouteTableId: !Ref PublicRTBC
       DestinationCidrBlock: "0.0.0.0/0"
+      GatewayId: !Ref InternetGateway
 
   PublicSubnetRTBAssociationC: 
     Type: "AWS::EC2::SubnetRouteTableAssociation"
@@ -222,6 +223,7 @@ Resources:
     Type: "AWS::EC2::Route"
     Properties: 
       RouteTableId: !Ref PrivateRTBA
+      DestinationCidrBlock: "10.0.0.0/16"
 
 ### Private Subnet C Routing ###
   PrivateRTBC: 
@@ -242,6 +244,7 @@ Resources:
     Type: "AWS::EC2::Route"
     Properties: 
       RouteTableId: !Ref PrivateRTBC
+      DestinationCidrBlock: "10.0.0.0/16"
 
 # Security Group
 ### Web Server Security Group ###
@@ -581,7 +584,7 @@ Resources:
         NetworkInterfaces: 
           - AssociatePublicIpAddress: "true"
             DeviceIndex: "0"
-            GroupSet: 
+            Groups: 
               - !Ref WebPublicSG
               - !Ref InternalSG
         UserData:
