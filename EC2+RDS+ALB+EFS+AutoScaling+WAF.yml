@@ -213,18 +213,6 @@ Resources:
         - Key: Name
           Value: !Sub "${PJPrefix}-private-route-a"
 
-  PrivateSubnetRTBAssociationA: 
-    Type: "AWS::EC2::SubnetRouteTableAssociation"
-    Properties: 
-      SubnetId: !Ref PrivateSubnetA
-      RouteTableId: !Ref PrivateRTBA
-
-  PrivateRouteA: 
-    Type: "AWS::EC2::Route"
-    Properties: 
-      RouteTableId: !Ref PrivateRTBA
-      DestinationCidrBlock: "10.0.0.0/16"
-
 ### Private Subnet C Routing ###
   PrivateRTBC: 
     Type: "AWS::EC2::RouteTable"
@@ -233,18 +221,6 @@ Resources:
       Tags: 
         - Key: Name
           Value: !Sub "${PJPrefix}-private-route-c"
-
-  PrivateSubnetRTBAssociationC:
-    Type: "AWS::EC2::SubnetRouteTableAssociation"
-    Properties: 
-      SubnetId: !Ref PrivateSubnetC
-      RouteTableId: !Ref PrivateRTBC
-
-  PrivateRouteC: 
-    Type: "AWS::EC2::Route"
-    Properties: 
-      RouteTableId: !Ref PrivateRTBC
-      DestinationCidrBlock: "10.0.0.0/16"
 
 # Security Group
 ### Web Server Security Group ###
