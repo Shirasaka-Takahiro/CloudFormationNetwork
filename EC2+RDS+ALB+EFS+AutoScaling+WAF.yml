@@ -571,43 +571,43 @@ Resources:
           Tags:
           - Key: Name
             Value: !Sub "${PJPrefix}-web-instance"
-      ImageId: !Ref WebAMI
-      InstanceType: !Ref WebInstanceClass
-      KeyName: !Ref KeyName
-      BlockDeviceMappings:
-        - DeviceName: '/dev/xvda'
-          Ebs:
-            VolumeSize: !Ref WebStorageSize
-      NetworkInterfaces: 
-        - AssociatePublicIpAddress: "true"
-          DeviceIndex: "0"
-          GroupSet: 
-            - !Ref WebPublicSG
-            - !Ref InternalSG
-      UserData:
-        Fn::Base64: !Join [
-          "",
-          [
-          "#!/bin/bash\n",
-          "yum -y update\n",
-          "yum -y install httpd\n",
-          "systemctl start httpd\n",
-          "systemctl enable httpd\n",
-          "amazon-linux-extras install php7.4\n",
-          "echo '<?php phpinfo(); ?>' > /var/www/html/phpinfo.php\n",
-          "yum -y install amazon-efs-utils\n",
-          "mkdir /mnt/share\n",
-          "mount -t nfs4 -o nfsvers=4.1,rsize=1048576,wsize=1048576,hard,timeo=600,retrans=2 ",
-          !Ref EFS,
-          ".efs.ap-northeast-1.amazonaws.com:/ /mnt/share\n",
-          "echo ",
-          !Ref EFS,
-          ":/ /mnt/share efs defaults,_netdev 0 0 >> ",
-          "/etc/fstab\n",
-          "mount -a\n",
-          "touch /var/www/html/healthcheck.html"
+        ImageId: !Ref WebAMI
+        InstanceType: !Ref WebInstanceClass
+        KeyName: !Ref KeyName
+        BlockDeviceMappings:
+          - DeviceName: '/dev/xvda'
+            Ebs:
+              VolumeSize: !Ref WebStorageSize
+        NetworkInterfaces: 
+          - AssociatePublicIpAddress: "true"
+            DeviceIndex: "0"
+            GroupSet: 
+              - !Ref WebPublicSG
+              - !Ref InternalSG
+        UserData:
+          Fn::Base64: !Join [
+            "",
+            [
+            "#!/bin/bash\n",
+            "yum -y update\n",
+            "yum -y install httpd\n",
+            "systemctl start httpd\n",
+            "systemctl enable httpd\n",
+            "amazon-linux-extras install php7.4\n",
+            "echo '<?php phpinfo(); ?>' > /var/www/html/phpinfo.php\n",
+            "yum -y install amazon-efs-utils\n",
+            "mkdir /mnt/share\n",
+            "mount -t nfs4 -o nfsvers=4.1,rsize=1048576,wsize=1048576,hard,timeo=600,retrans=2 ",
+            !Ref EFS,
+            ".efs.ap-northeast-1.amazonaws.com:/ /mnt/share\n",
+            "echo ",
+            !Ref EFS,
+            ":/ /mnt/share efs defaults,_netdev 0 0 >> ",
+            "/etc/fstab\n",
+            "mount -a\n",
+            "touch /var/www/html/healthcheck.html"
+            ]
           ]
-        ]
 
   AutoScalingGroup:
     Type: AWS::AutoScaling::AutoScalingGroup
