@@ -1,0 +1,569 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: Template-EC2-RDS-ALB-EFS-AutoScaling-WAF
+
+
+# Input Parameters
+Parameters:
+### Project Prefix ###
+  PJPrefix:
+    Type: String
+    Description: Project Code
+### VPC ###
+  VPCCIDR:
+    Type: String
+    Default: "10.0.0.0/16"
+    Description: VPC
+### Public Subnet ###
+  PublicSubnetCIDRA:
+    Type: String
+    Default: "10.0.10.0/24"
+    Description: Public Subnet A
+  PublicSubnetCIDRC:
+    Type: String
+    Default: "10.0.30.0/24"
+    Description: Public Subnet C
+### Private Subnet ###
+  PrivateSubnetCIDRA:
+    Type: String
+    Default: "10.0.20.0/24"
+    Description: Private Subnet A
+  PrivateSubnetCIDRC:
+    Type: String
+    Default: "10.0.40.0/24"
+    Description: Private Subnet C
+### Web Instance ###
+  WebAMI:
+    Type: String
+    Default: ami-0b7546e839d7ace12
+    Description: Web AMI
+  WebInstanceClass:
+    Type: String
+    Default: t3.micro
+    Description: WEB InstanceClass
+  WebStorageSize:
+    Type: String
+    Default: 30
+    Description: WEB Server's root volume Sorage size
+### RDS Database type & Major version ###
+  MySQLMajorVersion:
+    Type: String
+    Default: "5.7"
+    AllowedValues: [ "5.5", "5.6", "5.7" ]
+### RDS Database type & Minor version ###
+  MySQLMinorVersion:
+    Type: String
+    Default: "22"
+### Instnce Options ###
+  DBInstanceClass:
+    Type: String
+    Default: "db.m4.large" 
+  DBStorageSize:
+    Type: String
+    Default: "50"
+  DBStorageType:
+    Type: String
+    Default: "gp2"
+### Database name ###
+  DBName:
+    Type: String
+    Default: "testdb"
+### User Options ###
+  DBMasterUserName:
+    Type: String
+    Default: "root"
+    NoEcho: true
+    Description: DB master user name
+  DBPassword: 
+    Default: "DBPassword"
+    NoEcho: true
+    Type: String
+    Description: DB password
+### MyIP ###
+  MyIP:
+    Description: IP address allowed to access EC2
+    Type: String
+    Description: IP from My PC
+### Key pair ###
+  KeyName:
+    Description: EC2 Keyname
+    Type: 'AWS::EC2::KeyPair::KeyName'
+    Description: Key Pair
+
+### Resources ###
+Resources: 
+# VPC
+  VPC: 
+    Type: "AWS::EC2::VPC"
+    Properties: 
+      CidrBlock: !Ref VPCCIDR
+      EnableDnsSupport: "true"
+      EnableDnsHostnames: "true"
+      InstanceTenancy: default
+      Tags: 
+        - Key: Name
+          Value: !Sub "${PJPrefix}-vpc"
+# Internet Gateway
+  InternetGateway: 
+    Type: "AWS::EC2::InternetGateway"
+    Properties: 
+      Tags: 
+        - Key: Name
+          Value: !Sub "${PJPrefix}-igw"
+
+  IgwAttachment: 
+    Type: "AWS::EC2::VPCGatewayAttachment"
+    Properties: 
+      InternetGatewayId: !Ref InternetGateway
+      VpcId: !Ref VPC
+
+# Subnet
+### Public Subnet ###
+  PublicSubnetA: 
+    Type: "AWS::EC2::Subnet"
+    Properties: 
+      AvailabilityZone: "ap-northeast-1a"
+      CidrBlock: !Ref PublicSubnetCIDRA
+      VpcId: !Ref VPC 
+      Tags: 
+        - Key: Name
+          Value: !Sub "${PJPrefix}-public-subnet-a"
+
+  PublicSubnetC: 
+    Type: "AWS::EC2::Subnet"
+    Properties: 
+      AvailabilityZone: "ap-northeast-1c"
+      CidrBlock: !Ref PublicSubnetCIDRC
+      VpcId: !Ref VPC 
+      Tags: 
+        - Key: Name
+          Value: !Sub "${PJPrefix}-public-subnet-c"
+
+### Private Subnet ###
+  PrivateSubnetA: 
+    Type: "AWS::EC2::Subnet"
+    Properties: 
+      AvailabilityZone: "ap-northeast-1a"
+      CidrBlock: !Ref PrivateSubnetCIDRA
+      VpcId: !Ref VPC 
+      Tags: 
+        - Key: Name
+          Value: !Sub "${PJPrefix}-private-subnet-a"
+
+  PrivateSubnetC: 
+    Type: "AWS::EC2::Subnet"
+    Properties: 
+      AvailabilityZone: "ap-northeast-1c"
+      CidrBlock: !Ref PrivateSubnetCIDRC
+      VpcId: !Ref VPC 
+      Tags: 
+        - Key: Name
+          Value: !Sub "${PJPrefix}-private-subnet-c"
+
+# RouteTable
+### Public Subnet A Routing ###
+  PublicRTBA: 
+    Type: "AWS::EC2::RouteTable"
+    Properties: 
+      VpcId: !Ref VPC 
+      Tags: 
+        - Key: Name
+          Value: !Sub "${PJPrefix}-public-route-a"
+
+  PublicRouteA: 
+    Type: "AWS::EC2::Route"
+    Properties: 
+      RouteTableId: !Ref PublicRTBA
+      DestinationCidrBlock: "0.0.0.0/0"
+      GatewayId: !Ref InternetGateway
+
+  PublicSubnetRTBAssociationA: 
+    Type: "AWS::EC2::SubnetRouteTableAssociation"
+    Properties: 
+      SubnetId: !Ref PublicSubnetA 
+      RouteTableId: !Ref PublicRTBA
+
+### Public Subnet C Routing ###
+  PublicRTBC: 
+    Type: "AWS::EC2::RouteTable"
+    Properties: 
+      VpcId: !Ref VPC 
+      Tags: 
+        - Key: Name
+          Value: !Sub "${PJPrefix}-public-route-c"
+
+  PublicRouteC: 
+    Type: "AWS::EC2::Route"
+    Properties: 
+      RouteTableId: !Ref PublicRTBC
+      DestinationCidrBlock: "0.0.0.0/0"
+
+  PublicSubnetRTBAssociationC: 
+    Type: "AWS::EC2::SubnetRouteTableAssociation"
+    Properties: 
+      SubnetId: !Ref PublicSubnetC
+      RouteTableId: !Ref PublicRTBC
+
+### Private Subnet A Routing ###
+  PrivateRTBA: 
+    Type: "AWS::EC2::RouteTable"
+    Properties: 
+      VpcId: !Ref VPC 
+      Tags: 
+        - Key: Name
+          Value: !Sub "${PJPrefix}-private-route-a"
+
+  PrivateSubnetRTBAssociationA: 
+    Type: "AWS::EC2::SubnetRouteTableAssociation"
+    Properties: 
+      SubnetId: !Ref PrivateSubnetA
+      RouteTableId: !Ref PrivateRTBA
+
+  PrivateRouteA: 
+    Type: "AWS::EC2::Route"
+    Properties: 
+      RouteTableId: !Ref PrivateRTBA
+
+### Private Subnet C Routing ###
+  PrivateRTBC: 
+    Type: "AWS::EC2::RouteTable"
+    Properties: 
+      VpcId: !Ref VPC 
+      Tags: 
+        - Key: Name
+          Value: !Sub "${PJPrefix}-private-route-c"
+
+  PrivateSubnetRTBAssociationC:
+    Type: "AWS::EC2::SubnetRouteTableAssociation"
+    Properties: 
+      SubnetId: !Ref PrivateSubnetC
+      RouteTableId: !Ref PrivateRTBC
+
+  PrivateRouteC: 
+    Type: "AWS::EC2::Route"
+    Properties: 
+      RouteTableId: !Ref PrivateRTBC
+
+# Security Group
+### Web Server Security Group ###
+  WebPublicSG:
+    Type: "AWS::EC2::SecurityGroup"
+    Properties:
+      GroupDescription: web-public-sg
+      GroupName: WebPublicSG
+      VpcId: !Ref VPC
+      Tags: 
+        - Key: Name
+          Value: !Sub "${PJPrefix}-web-public-sg"
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort : 22
+          ToPort : 22
+          SourceSecurityGroupId: !Ref MyIP
+        - IpProtocol: tcp
+          FromPort : 80
+          ToPort : 80
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: tcp
+          FromPort : 443
+          ToPort : 443
+          CidrIp: 0.0.0.0/0
+      
+### ALB Security Group ###
+  AlbSG:
+    Type: "AWS::EC2::SecurityGroup"
+    Properties:
+      GroupDescription: alb-sg
+      GroupName: AlbSG
+      VpcId: !Ref VPC
+      Tags:
+        - Key: Name
+          Value: !Sub "${PJPrefix}-alb-sg"
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort : 80
+          ToPort : 80
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: tcp
+          FromPort : 443
+          ToPort : 443
+          CidrIp: 0.0.0.0/0
+            
+### RDS Server Security Group ###
+  RDSSG:
+    Type: "AWS::EC2::SecurityGroup"
+    Properties:
+      GroupDescription: rds-sg
+      GroupName: RDSSG
+      VpcId: !Ref VPC
+      Tags: 
+        - Key: Name
+          Value: !Sub "${PJPrefix}-rds-sg"
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort : 3306
+          ToPort : 3306
+          SourceSecurityGroupId: !Ref WebPublicSG
+
+### EFS Server Security Group ###
+  EFSSG:
+    Type: "AWS::EC2::SecurityGroup"
+    Properties:
+      GroupDescription: efs-sg
+      GroupName: EFSSG
+      VpcId: !Ref VPC
+      Tags: 
+        - Key: Name
+          Value: !Sub "${PJPrefix}-efs-sg"
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort : 2049
+          ToPort : 2049
+          SourceSecurityGroupId: !Ref WebPublicSG
+
+### Internal Security Group ###
+  InternalSG:
+    Type: "AWS::EC2::SecurityGroup"
+    Properties:
+      GroupDescription: internal-sg
+      GroupName: InternalSG
+      VpcId: !Ref VPC
+      Tags: 
+        - Key: Name
+          Value: !Sub "${PJPrefix}-internal-sg"
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 0
+          ToPort: 65535
+          CidrIp: 10.0.0.0/16
+
+# Instance
+### Web Instance Public 1a ###
+  WebInstance1A: 
+    Type: AWS::EC2::Instance
+    DependsOn: InternetGateway
+    Properties: 
+      ImageId: !Ref WebAMI
+      InstanceType: !Ref WebInstanceClass
+      KeyName: !Ref KeyName
+      BlockDeviceMappings:
+        - DeviceName: '/dev/xvda'
+          Ebs:
+            VolumeSize: !Ref WebStorageSize
+      NetworkInterfaces: 
+        - AssociatePublicIpAddress: "false"
+          DeviceIndex: "0"
+          SubnetId: !Ref PublicSubnetA
+          GroupSet: 
+            - !Ref WebPublicSG
+            - !Ref InternalSG
+      UserData:
+        Fn::Base64: !Join [
+          "",
+          [
+          "#!/bin/bash\n",
+          "yum -y update\n",
+          "yum -y install httpd\n",
+          "systemctl start httpd\n",
+          "systemctl enable httpd\n",
+          "amazon-linux-extras install php7.4\n",
+          "echo '<?php phpinfo(); ?>' > /var/www/html/phpinfo.php\n",
+          "yum -y install amazon-efs-utils\n",
+          "mkdir /mnt/share\n",
+          "mount -t nfs4 -o nfsvers=4.1,rsize=1048576,wsize=1048576,hard,timeo=600,retrans=2 ",
+          !Ref EFS,
+          ".efs.ap-northeast-1.amazonaws.com:/ /mnt/share\n",
+          "echo ",
+          !Ref EFS,
+          ":/ /mnt/share efs defaults,_netdev 0 0 >> ",
+          "/etc/fstab\n",
+          "mount -a\n",
+          "touch /var/www/html/healthcheck.html"
+          ]
+        ]
+      Tags:
+          - Key: Name
+            Value: !Sub "${PJPrefix}-web-public-1a"
+
+### Web Instance private 1c ###
+  WebInstance1C: 
+    Type: AWS::EC2::Instance
+    DependsOn: InternetGateway
+    Properties: 
+      ImageId: !Ref WebAMI
+      InstanceType: !Ref WebInstanceClass
+      KeyName: !Ref KeyName
+      BlockDeviceMappings:
+        - DeviceName: '/dev/xvda'
+          Ebs:
+            VolumeSize: !Ref WebStorageSize
+      NetworkInterfaces: 
+        - AssociatePublicIpAddress: "false"
+          DeviceIndex: "0"
+          SubnetId: !Ref PublicSubnetC
+          GroupSet: 
+            - !Ref WebPublicSG
+            - !Ref InternalSG
+      UserData:
+        Fn::Base64: !Join [
+          "",
+          [
+          "#!/bin/bash\n",
+          "yum -y update\n",
+          "yum -y install httpd\n",
+          "systemctl start httpd\n",
+          "systemctl enable httpd\n",
+          "amazon-linux-extras install php7.4\n",
+          "echo '<?php phpinfo(); ?>' > /var/www/html/phpinfo.php\n",
+          "yum -y install amazon-efs-utils\n",
+          "mkdir /mnt/share\n",
+          "mount -t nfs4 -o nfsvers=4.1,rsize=1048576,wsize=1048576,hard,timeo=600,retrans=2 ",
+          !Ref EFS,
+          ".efs.ap-northeast-1.amazonaws.com:/ /mnt/share\n",
+          "echo ",
+          !Ref EFS,
+          ":/ /mnt/share efs defaults,_netdev 0 0 >> ",
+          "/etc/fstab\n",
+          "mount -a\n",
+          "touch /var/www/html/healthcheck.html"
+          ]
+        ]
+      Tags:
+          - Key: Name
+            Value: !Sub "${PJPrefix}-web-Public-1c"
+
+### RDS Instance ###
+  DBInstance: 
+    Type: "AWS::RDS::DBInstance"
+    Properties: 
+      DBInstanceIdentifier: !Sub "${PJPrefix}-${DBName}"
+      Engine: MySQL
+      EngineVersion: !Sub "${MySQLMajorVersion}.${MySQLMinorVersion}"
+      DBInstanceClass: !Ref DBInstanceClass
+      AllocatedStorage: !Ref DBStorageSize
+      StorageType: !Ref DBStorageType
+      DBName: !Ref DBName
+      MasterUsername: !Ref DBMasterUserName
+      MasterUserPassword: !Ref DBPassword
+      DBSubnetGroupName: !Ref DBSubnetGroup
+      PubliclyAccessible: false
+      MultiAZ: true
+      PreferredBackupWindow: "18:00-18:30"
+      PreferredMaintenanceWindow: "sat:19:00-sat:19:30"
+      AutoMinorVersionUpgrade: false
+      DBParameterGroupName: !Ref DBParameterGroup  
+      VPCSecurityGroups:
+        - !Ref RDSSG
+      CopyTagsToSnapshot: true
+      BackupRetentionPeriod: 7
+      Tags: 
+        - Key: "Name"
+          Value: !Ref DBName
+    DeletionPolicy: "Delete"
+
+# DBParameterGroup
+  DBParameterGroup:
+    Type: "AWS::RDS::DBParameterGroup"
+    Properties:
+      Family: !Sub "MySQL${MySQLMajorVersion}"
+      Description: RDS parameter group"
+
+# DBSubnetGroup
+  DBSubnetGroup: 
+    Type: "AWS::RDS::DBSubnetGroup"
+    Properties: 
+      DBSubnetGroupName: !Sub "${PJPrefix}-${DBName}-subnet-group"
+      DBSubnetGroupDescription: "-"
+      SubnetIds: 
+        - !Ref PrivateSubnetA
+        - !Ref PrivateSubnetC
+
+# Target Group
+  TargetGroup:
+    Type: "AWS::ElasticLoadBalancingV2::TargetGroup"
+    Properties: 
+      VpcId: !Ref VPC 
+      Name: !Sub "${PJPrefix}-tg"
+      Protocol: HTTP
+      Port: 80
+      HealthCheckProtocol: HTTP
+      HealthCheckPath: "/healthcheck.html"
+      HealthCheckPort: "traffic-port"
+      HealthyThresholdCount: 2
+      UnhealthyThresholdCount: 2
+      HealthCheckTimeoutSeconds: 5
+      HealthCheckIntervalSeconds: 10
+      Matcher: 
+        HttpCode: 200
+      Tags: 
+        - Key: Name
+          Value: !Sub "${PJPrefix}-tg"
+      TargetGroupAttributes: 
+        - Key: "deregistration_delay.timeout_seconds"
+          Value: 300
+        - Key: "stickiness.enabled"
+          Value: false
+        - Key: "stickiness.type"
+          Value: lb_cookie
+        - Key: "stickiness.lb_cookie.duration_seconds"
+          Value: 86400
+      Targets: 
+        - Id: !Ref WebInstance1A
+        - Id: !Ref WebInstance1C
+          Port: 80
+
+# Application Load balancer
+  ### ALB ###
+  ALB: 
+    Type: "AWS::ElasticLoadBalancingV2::LoadBalancer"
+    Properties: 
+      Name: !Sub "${PJPrefix}-alb"
+      Scheme: "internet-facing"
+      LoadBalancerAttributes: 
+        - Key: "deletion_protection.enabled"
+          Value: false
+        - Key: "idle_timeout.timeout_seconds"
+          Value: 4000
+      SecurityGroups:
+        - !Ref AlbSG
+      Subnets: 
+        - !Ref PublicSubnetA
+        - !Ref PublicSubnetC
+
+### ALB Listener ###
+  ALBListenerHTTP: 
+    Type: "AWS::ElasticLoadBalancingV2::Listener"
+    Properties:
+      DefaultActions: 
+        - TargetGroupArn: !Ref TargetGroup
+          Type: forward
+      LoadBalancerArn: !Ref ALB
+      Port: 80
+      Protocol: HTTP      
+      Port: 443
+      Protocol: HTTPS
+
+### EFS ###
+  EFS:
+    Type: "AWS::EFS::FileSystem"
+    Properties:
+      Encrypted: true
+      FileSystemTags: 
+      - Key: "Name"
+        Value: !Sub "${PJPrefix}-efs"
+
+#Mount Target
+  MountTargetA:
+    Type: "AWS::EFS::MountTarget"
+    Properties:
+      FileSystemId: !Ref EFS
+      SecurityGroups: 
+      - !Ref EFSSG
+      SubnetId: !Ref PublicSubnetA
+
+  MountTargetC:
+    Type: "AWS::EFS::MountTarget"
+    Properties:
+      FileSystemId: !Ref EFS
+      SecurityGroups: 
+      - !Ref EFSSG
+      SubnetId: !Ref PublicSubnetC
