@@ -81,7 +81,7 @@ Parameters:
 ### ACM Certificate ###
   ACMCertificateID:
     Type: String
-    Default: Default: arn:aws:acm:us-east-1:{AWS::AccountId}:certificate/{SSLCertificateId}
+    Default: arn:aws:acm:us-east-1:{AWS::AccountId}:certificate/{SSLCertificateId}
     Description: ACM Certificate ID
 ### ALB SSL Listener Policy ###
   ALBSSLPolicy:
