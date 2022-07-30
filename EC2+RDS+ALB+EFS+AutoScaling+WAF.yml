@@ -88,6 +88,10 @@ Parameters:
     Type: String
     Default: ELBSecurityPolicy-2016-08
     Description: ALB SSL Listener Policy
+### Auto Scaling Policy ###
+  PredefinedMetricType:
+    Type: String
+    Description: "PredefinedMetricType. ALBRequestCountPerTarget | ASGAverageCPUUtilization | ASGAverageNetworkIn | ASGAverageNetworkOut"
 ### MyIP ###
   MyIP:
     Description: IP address allowed to access EC2
@@ -633,6 +637,17 @@ Resources:
         - Key: Name
           Value: !Sub "${PJPrefix}-web-public-autoscalinggroup"
           PropagateAtLaunch: true
+
+  ASGScalingPolicy: 
+    Type: AWS::AutoScaling::ScalingPolicy
+    Properties: 
+      AutoScalingGroupName: !Ref AutoScalingGroup
+      PolicyType: TargetTrackingScaling
+      TargetTrackingConfiguration:
+        DisableScaleIn: False
+        PredefinedMetricSpecification:
+          PredefinedMetricType: !Ref PredefinedMetricType
+        TargetValue: 50
 
 ### EFS ###
   EFS:
