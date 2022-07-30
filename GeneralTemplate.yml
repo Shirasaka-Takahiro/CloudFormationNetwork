@@ -742,6 +742,12 @@ Resources:
             CloudWatchMetricsEnabled: true
             SampledRequestsEnabled: true
             MetricName: AWSManagedRulesCommonRuleSet
+  WAFLogConfig:
+    Type: AWS::WAFv2::LoggingConfiguration
+    Properties:
+      LogDestinationConfigs:
+        - !GetAtt S3BucketForWaflog.Arn
+      ResourceArn: !GetAtt WebAcl.Arn
   WebACLAssociation:
     Type: AWS::WAFv2::WebACLAssociation
     Properties:
@@ -757,3 +763,18 @@ Resources:
           - 10.0.0.0/16
           - 192.168.0.0/24
           - 1.1.1.0/32
+
+  ### S3 ###
+  S3BucketForWaflog:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub "aws-waf-logs-${PJPrefix}"
+      AccessControl: Private
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: True
+        BlockPublicPolicy: True
+        IgnorePublicAcls: True
+        RestrictPublicBuckets: True
+      Tags:
+        - Key: Name
+          Value: !Sub "aws-waf-logs-${PJPrefix}"
