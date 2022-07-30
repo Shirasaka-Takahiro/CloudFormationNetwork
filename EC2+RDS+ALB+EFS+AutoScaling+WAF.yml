@@ -690,14 +690,24 @@ Resources:
       Name: !Sub "${PJPrefix}-web-acl"
       Scope: !Ref Scope
       DefaultAction:
-        Allow: {}
+        Block: {}
       VisibilityConfig:
         CloudWatchMetricsEnabled: true
         SampledRequestsEnabled: true
         MetricName: !Sub ${PJPrefix}-web-acl
       Rules:
-        -
-          Name: AWS-AWSManagedRulesCommonRuleSet
+        - Name: WAFIPsetRule
+          Priority: 0
+          Action:
+            Allow: {}
+          Statement:
+            IPSetReferenceStatement:
+              Arn: !GetAtt WAFIPSet.Arn
+          VisibilityConfig:
+            CloudWatchMetricsEnabled: true
+            SampledRequestsEnabled: true
+            MetricName: WAFIPsetRule
+        - Name: AWSManagedRulesCommonRuleSet
           Priority: 1
           Statement:
             ManagedRuleGroupStatement:
@@ -731,9 +741,19 @@ Resources:
           VisibilityConfig:
             CloudWatchMetricsEnabled: true
             SampledRequestsEnabled: true
-            MetricName: AWS-AWSManagedRulesCommonRuleSet
+            MetricName: AWSManagedRulesCommonRuleSet
   WebACLAssociation:
     Type: AWS::WAFv2::WebACLAssociation
     Properties:
       ResourceArn: !Ref ALB
       WebACLArn: !GetAtt WebAcl.Arn
+  WAFIPSet:
+    Type: AWS::WAFv2::IPSet
+    Properties:
+      Name: !Sub "${PJPrefix}-WAF-IPset"
+      Scope: !Ref Scope
+      IPAddressVersion: IPV4
+      Addresses:
+          - 10.0.0.0/16
+          - 192.168.0.0/24
+          - 1.1.1.0/32
