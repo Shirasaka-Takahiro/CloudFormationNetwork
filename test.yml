@@ -105,7 +105,12 @@ Parameters:
     Type: String
     Default: XXXXXXXXXXXXX
     Description: Hosted zone ID on Route53
-### ROute53 FQDN ###
+### Route53 Domain Name ###
+    DomainName:
+    Type: String
+    Default: example.com
+    Description: Domain Name on Route53
+### Route53 FQDN ###
   FQDN:
     Type: String
     Default: www.example.com
@@ -513,6 +518,12 @@ Resources:
   Route53RecordSet:
     Type: "AWS::Route53::RecordSet"
     Properties:
+      Name: !Sub '${DomainName}'
+      HostedZoneId: !Sub ${HostedZoneID}
+      Type: "A"
+      AliasTarget: 
+        HostedZoneId: Z2FDTNDATAQYW2
+        DNSName: !GetAtt 'CloudFrontDistribution.DomainName'
       Name: !Sub '${FQDN}'
       HostedZoneId: !Sub ${HostedZoneID}
       Type: "A"
