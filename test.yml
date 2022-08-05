@@ -92,7 +92,7 @@ Parameters:
   PredefinedMetricType:
     Type: String
     Description: "PredefinedMetricType. ALBRequestCountPerTarget | ASGAverageCPUUtilization | ASGAverageNetworkIn | ASGAverageNetworkOut"
-### Web ACl Scope ###
+### Web ACL Scope ###
   Scope:
     Type: String
     Default: REGIONAL
@@ -100,6 +100,11 @@ Parameters:
       - REGIONAL
       - CLOUDFRONT
     Description: "Select in the scope of waf(REGIONAL or CLOUDFRONT)"
+### Route53 Hosted Zone ###
+  HostedZoneName: 
+    Type: String
+    Default: XXX.com
+    Description: Hosted zone name on Route53
 ### MyIP ###
   MyIP:
     Description: IP address allowed to access EC2
