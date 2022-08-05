@@ -78,16 +78,11 @@ Parameters:
     NoEcho: true
     Type: String
     Description: DB password
-### ACM Certificate for ALB ###
-  ACMCertificateIDALB:
+### ACM Certificate ###
+  ACMCertificateId:
     Type: String
     Default: xxxxx-xxxxx-xxxxx-xxxxx
-    Description: ACM Certificate ID for ALB
-### ACM Certificate for CloudFront ###
-  ACMCertificateIDCloudFront:
-    Type: String
-    Default: xxxxx-xxxxx-xxxxx-xxxxx
-    Description: ACM Certificate ID for CloudFront
+    Description: ACM Certificate ID
 ### ALB SSL Listener Policy ###
   ALBSSLPolicy:
     Type: String
@@ -97,7 +92,7 @@ Parameters:
   PredefinedMetricType:
     Type: String
     Description: "PredefinedMetricType. ALBRequestCountPerTarget | ASGAverageCPUUtilization | ASGAverageNetworkIn | ASGAverageNetworkOut"
-### Web ACl Scope ###
+### Web ACL Scope ###
   Scope:
     Type: String
     Default: REGIONAL
@@ -385,20 +380,7 @@ Resources:
           "yum -y update\n",
           "yum -y install httpd\n",
           "systemctl start httpd\n",
-          "systemctl enable httpd\n",
-          "amazon-linux-extras install php7.4\n",
-          "echo '<?php phpinfo(); ?>' > /var/www/html/phpinfo.php\n",
-          "yum -y install amazon-efs-utils\n",
-          "mkdir /mnt/share\n",
-          "mount -t nfs4 -o nfsvers=4.1,rsize=1048576,wsize=1048576,hard,timeo=600,retrans=2 ",
-          !Ref EFS,
-          ".efs.ap-northeast-1.amazonaws.com:/ /mnt/share\n",
-          "echo ",
-          !Ref EFS,
-          ":/ /mnt/share efs defaults,_netdev 0 0 >> ",
-          "/etc/fstab\n",
-          "mount -a\n",
-          "touch /var/www/html/healthcheck.html"
+          "systemctl enable httpd"
           ]
         ]
       Tags:
@@ -413,108 +395,6 @@ Resources:
     Properties:
       InstanceId: !Ref WebInstance1A
       EIP: !Ref WebInstance1AEIP
-
-### Web Instance private 1c ###
-  WebInstance1C: 
-    Type: AWS::EC2::Instance
-    DependsOn: InternetGateway
-    Properties: 
-      ImageId: !Ref WebAMI
-      InstanceType: !Ref WebInstanceClass
-      KeyName: !Ref KeyName
-      BlockDeviceMappings:
-        - DeviceName: '/dev/xvda'
-          Ebs:
-            VolumeSize: !Ref WebStorageSize
-      NetworkInterfaces: 
-        - AssociatePublicIpAddress: "true"
-          DeviceIndex: "0"
-          SubnetId: !Ref PublicSubnetC
-          GroupSet: 
-            - !Ref WebPublicSG
-            - !Ref InternalSG
-      UserData:
-        Fn::Base64: !Join [
-          "",
-          [
-          "#!/bin/bash\n",
-          "yum -y update\n",
-          "yum -y install httpd\n",
-          "systemctl start httpd\n",
-          "systemctl enable httpd\n",
-          "amazon-linux-extras install php7.4\n",
-          "echo '<?php phpinfo(); ?>' > /var/www/html/phpinfo.php\n",
-          "yum -y install amazon-efs-utils\n",
-          "mkdir /mnt/share\n",
-          "mount -t nfs4 -o nfsvers=4.1,rsize=1048576,wsize=1048576,hard,timeo=600,retrans=2 ",
-          !Ref EFS,
-          ".efs.ap-northeast-1.amazonaws.com:/ /mnt/share\n",
-          "echo ",
-          !Ref EFS,
-          ":/ /mnt/share efs defaults,_netdev 0 0 >> ",
-          "/etc/fstab\n",
-          "mount -a\n",
-          "touch /var/www/html/healthcheck.html"
-          ]
-        ]
-      Tags:
-          - Key: Name
-            Value: !Sub "${PJPrefix}-web-Public-1c"
-  WebInstance1CEIP:
-    Type: "AWS::EC2::EIP"
-    Properties:
-      Domain: vpc
-  WebInstance1CEIPAssociation:
-    Type: AWS::EC2::EIPAssociation
-    Properties:
-      InstanceId: !Ref WebInstance1C
-      EIP: !Ref WebInstance1CEIP
-
-### RDS Instance ###
-  DBInstance: 
-    Type: "AWS::RDS::DBInstance"
-    Properties: 
-      DBInstanceIdentifier: !Sub "${PJPrefix}-${DBName}"
-      Engine: MySQL
-      EngineVersion: !Sub "${MySQLMajorVersion}.${MySQLMinorVersion}"
-      DBInstanceClass: !Ref DBInstanceClass
-      AllocatedStorage: !Ref DBStorageSize
-      StorageType: !Ref DBStorageType
-      DBName: !Ref DBName
-      MasterUsername: !Ref DBMasterUserName
-      MasterUserPassword: !Ref DBPassword
-      DBSubnetGroupName: !Ref DBSubnetGroup
-      PubliclyAccessible: false
-      MultiAZ: true
-      PreferredBackupWindow: "18:00-18:30"
-      PreferredMaintenanceWindow: "sat:19:00-sat:19:30"
-      AutoMinorVersionUpgrade: false
-      DBParameterGroupName: !Ref DBParameterGroup  
-      VPCSecurityGroups:
-        - !Ref RDSSG
-      CopyTagsToSnapshot: true
-      BackupRetentionPeriod: 7
-      Tags: 
-        - Key: "Name"
-          Value: !Ref DBName
-    DeletionPolicy: "Delete"
-
-# DBParameterGroup
-  DBParameterGroup:
-    Type: "AWS::RDS::DBParameterGroup"
-    Properties:
-      Family: !Sub "MySQL${MySQLMajorVersion}"
-      Description: RDS parameter group"
-
-# DBSubnetGroup
-  DBSubnetGroup: 
-    Type: "AWS::RDS::DBSubnetGroup"
-    Properties: 
-      DBSubnetGroupName: !Sub "${PJPrefix}-${DBName}-subnet-group"
-      DBSubnetGroupDescription: "-"
-      SubnetIds: 
-        - !Ref PrivateSubnetA
-        - !Ref PrivateSubnetC
 
 # Target Group
   TargetGroup:
@@ -547,7 +427,6 @@ Resources:
           Value: 86400
       Targets: 
         - Id: !Ref WebInstance1A
-        - Id: !Ref WebInstance1C
           Port: 80
 
 # Application Load balancer
@@ -595,195 +474,6 @@ Resources:
       Protocol: HTTPS
       SslPolicy: !Ref ALBSSLPolicy
 
-### Launch Template ###
-  WebInstanceLaunchTemplate:
-    Type: AWS::EC2::LaunchTemplate
-    Properties:
-      LaunchTemplateName: !Sub "${PJPrefix}-web-instance-template"
-      LaunchTemplateData:
-        TagSpecifications:
-        - ResourceType: instance
-          Tags:
-          - Key: Name
-            Value: !Sub "${PJPrefix}-web-instance"
-        ImageId: !Ref WebAMI
-        InstanceType: !Ref WebInstanceClass
-        KeyName: !Ref KeyName
-        BlockDeviceMappings:
-          - DeviceName: '/dev/xvda'
-            Ebs:
-              VolumeSize: !Ref WebStorageSize
-        NetworkInterfaces: 
-          - AssociatePublicIpAddress: "true"
-            DeviceIndex: "0"
-            Groups: 
-              - !Ref WebPublicSG
-              - !Ref InternalSG
-        UserData:
-          Fn::Base64: !Join [
-            "",
-            [
-            "#!/bin/bash\n",
-            "yum -y update\n",
-            "yum -y install httpd\n",
-            "systemctl start httpd\n",
-            "systemctl enable httpd\n",
-            "amazon-linux-extras install php7.4\n",
-            "echo '<?php phpinfo(); ?>' > /var/www/html/phpinfo.php\n",
-            "yum -y install amazon-efs-utils\n",
-            "mkdir /mnt/share\n",
-            "mount -t nfs4 -o nfsvers=4.1,rsize=1048576,wsize=1048576,hard,timeo=600,retrans=2 ",
-            !Ref EFS,
-            ".efs.ap-northeast-1.amazonaws.com:/ /mnt/share\n",
-            "echo ",
-            !Ref EFS,
-            ":/ /mnt/share efs defaults,_netdev 0 0 >> ",
-            "/etc/fstab\n",
-            "mount -a\n",
-            "touch /var/www/html/healthcheck.html"
-            ]
-          ]
-
-  AutoScalingGroup:
-    Type: AWS::AutoScaling::AutoScalingGroup
-    Properties:
-      AutoScalingGroupName: !Sub "${PJPrefix}-autoscalinggroup"
-      VPCZoneIdentifier:
-        - !Ref PublicSubnetA
-        - !Ref PublicSubnetC
-      LaunchTemplate:
-        LaunchTemplateId: !Ref WebInstanceLaunchTemplate
-        Version: !GetAtt 'WebInstanceLaunchTemplate.LatestVersionNumber'
-      TargetGroupARNs:
-        - !Ref TargetGroup
-      TerminationPolicies:
-        - NewestInstance
-      DesiredCapacity: 2
-      MaxSize: 5
-      MinSize: 1
-      Tags:
-        - Key: Name
-          Value: !Sub "${PJPrefix}-web-public-autoscalinggroup"
-          PropagateAtLaunch: true
-
-  ASGScalingPolicy: 
-    Type: AWS::AutoScaling::ScalingPolicy
-    Properties: 
-      AutoScalingGroupName: !Ref AutoScalingGroup
-      PolicyType: TargetTrackingScaling
-      TargetTrackingConfiguration:
-        DisableScaleIn: False
-        PredefinedMetricSpecification:
-          PredefinedMetricType: !Ref PredefinedMetricType
-        TargetValue: 50
-
-### EFS ###
-  EFS:
-    Type: "AWS::EFS::FileSystem"
-    Properties:
-      Encrypted: true
-      FileSystemTags: 
-      - Key: "Name"
-        Value: !Sub "${PJPrefix}-efs"
-
-#Mount Target
-  MountTargetA:
-    Type: "AWS::EFS::MountTarget"
-    Properties:
-      FileSystemId: !Ref EFS
-      SecurityGroups: 
-      - !Ref EFSSG
-      SubnetId: !Ref PublicSubnetA
-
-  MountTargetC:
-    Type: "AWS::EFS::MountTarget"
-    Properties:
-      FileSystemId: !Ref EFS
-      SecurityGroups: 
-      - !Ref EFSSG
-      SubnetId: !Ref PublicSubnetC
-  
-### WAF v2 ###
-  WebAcl:
-    Type: AWS::WAFv2::WebACL
-    Properties: 
-      Name: !Sub "${PJPrefix}-web-acl"
-      Scope: !Ref Scope
-      DefaultAction:
-        Block: {}
-      VisibilityConfig:
-        CloudWatchMetricsEnabled: true
-        SampledRequestsEnabled: true
-        MetricName: !Sub ${PJPrefix}-web-acl
-      Rules:
-        - Name: WAFIPsetRule
-          Priority: 0
-          Action:
-            Allow: {}
-          Statement:
-            IPSetReferenceStatement:
-              Arn: !GetAtt WAFIPSet.Arn
-          VisibilityConfig:
-            CloudWatchMetricsEnabled: true
-            SampledRequestsEnabled: true
-            MetricName: WAFIPsetRule
-        - Name: AWSManagedRulesCommonRuleSet
-          Priority: 1
-          Statement:
-            ManagedRuleGroupStatement:
-              VendorName: AWS
-              Name: AWSManagedRulesCommonRuleSet
-              ExcludedRules:
-                - Name: NoUserAgent_HEADER
-                - Name: UserAgent_BadBots_HEADER
-                - Name: SizeRestrictions_QUERYSTRING
-                - Name: SizeRestrictions_Cookie_HEADER
-                - Name: SizeRestrictions_BODY
-                - Name: SizeRestrictions_URIPATH
-                - Name: EC2MetaDataSSRF_BODY
-                - Name: EC2MetaDataSSRF_COOKIE
-                - Name: EC2MetaDataSSRF_URIPATH
-                - Name: EC2MetaDataSSRF_QUERYARGUMENTS
-                - Name: GenericLFI_QUERYARGUMENTS
-                - Name: GenericLFI_URIPATH
-                - Name: GenericLFI_BODY
-                - Name: RestrictedExtensions_URIPATH
-                - Name: RestrictedExtensions_QUERYARGUMENTS
-                - Name: GenericRFI_QUERYARGUMENTS
-                - Name: GenericRFI_BODY
-                - Name: GenericRFI_URIPATH
-                - Name: CrossSiteScripting_COOKIE
-                - Name: CrossSiteScripting_QUERYARGUMENTS
-                - Name: CrossSiteScripting_BODY
-                - Name: CrossSiteScripting_URIPATH
-          OverrideAction:
-            None: {}
-          VisibilityConfig:
-            CloudWatchMetricsEnabled: true
-            SampledRequestsEnabled: true
-            MetricName: AWSManagedRulesCommonRuleSet
-  WAFLogConfig:
-    Type: AWS::WAFv2::LoggingConfiguration
-    Properties:
-      LogDestinationConfigs:
-        - !GetAtt S3BucketForWaflog.Arn
-      ResourceArn: !GetAtt WebAcl.Arn
-  WebACLAssociation:
-    Type: AWS::WAFv2::WebACLAssociation
-    Properties:
-      ResourceArn: !Ref ALB
-      WebACLArn: !GetAtt WebAcl.Arn
-  WAFIPSet:
-    Type: AWS::WAFv2::IPSet
-    Properties:
-      Name: !Sub "${PJPrefix}-WAF-IPset"
-      Scope: !Ref Scope
-      IPAddressVersion: IPV4
-      Addresses:
-          - 10.0.0.0/16
-          - 192.168.0.0/24
-          - 1.1.1.0/32
-
 ###CloudFront###
   CloudFrontDistribution:
     Type: "AWS::CloudFront::Distribution"
@@ -820,11 +510,7 @@ Resources:
         ViewerCertificate:
           SslSupportMethod: sni-only
           MinimumProtocolVersion: TLSv1.1_2016
-<<<<<<< HEAD
-          AcmCertificateArn: !Sub "arn:aws:acm:us-east-1:${AWS::AccountId}:certificate/${ACMCertificateIdALB}"
-=======
           AcmCertificateArn: !Sub "arn:aws:acm:us-east-1:${AWS::AccountId}:certificate/${ACMCertificateId}"
->>>>>>> 1e61012dfed84d780fe913bfef5ded00b5983cbf
         HttpVersion: http2
         Enabled: true
 
@@ -844,18 +530,3 @@ Resources:
       AliasTarget: 
         HostedZoneId: !GetAtt 'ALB.CanonicalHostedZoneID'
         DNSName: !GetAtt 'ALB.DNSName'
-
-  ### S3 ###
-  S3BucketForWaflog:
-    Type: AWS::S3::Bucket
-    Properties:
-      BucketName: !Sub "aws-waf-logs-${PJPrefix}"
-      AccessControl: Private
-      PublicAccessBlockConfiguration:
-        BlockPublicAcls: True
-        BlockPublicPolicy: True
-        IgnorePublicAcls: True
-        RestrictPublicBuckets: True
-      Tags:
-        - Key: Name
-          Value: !Sub "aws-waf-logs-${PJPrefix}"
