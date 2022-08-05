@@ -1,0 +1,557 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: Template-EC2-RDS-ALB-EFS-AutoScaling-WAF
+
+
+# Input Parameters
+Parameters:
+### Project Prefix ###
+  PJPrefix:
+    Type: String
+    Description: Project Code
+### VPC ###
+  VPCCIDR:
+    Type: String
+    Default: "10.0.0.0/16"
+    Description: VPC
+### Public Subnet ###
+  PublicSubnetCIDRA:
+    Type: String
+    Default: "10.0.10.0/24"
+    Description: Public Subnet A
+  PublicSubnetCIDRC:
+    Type: String
+    Default: "10.0.30.0/24"
+    Description: Public Subnet C
+### Private Subnet ###
+  PrivateSubnetCIDRA:
+    Type: String
+    Default: "10.0.20.0/24"
+    Description: Private Subnet A
+  PrivateSubnetCIDRC:
+    Type: String
+    Default: "10.0.40.0/24"
+    Description: Private Subnet C
+### Web Instance ###
+  WebAMI:
+    Type: String
+    Default: ami-0b7546e839d7ace12
+    Description: Web AMI
+  WebInstanceClass:
+    Type: String
+    Default: t3.micro
+    Description: WEB InstanceClass
+  WebStorageSize:
+    Type: String
+    Default: 30
+    Description: WEB Server's root volume Sorage size
+### RDS Database type & Major version ###
+  MySQLMajorVersion:
+    Type: String
+    Default: "5.7"
+    AllowedValues: [ "5.5", "5.6", "5.7" ]
+### RDS Database type & Minor version ###
+  MySQLMinorVersion:
+    Type: String
+    Default: "22"
+### Instnce Options ###
+  DBInstanceClass:
+    Type: String
+    Default: "db.m4.large" 
+  DBStorageSize:
+    Type: String
+    Default: "50"
+  DBStorageType:
+    Type: String
+    Default: "gp2"
+### Database name ###
+  DBName:
+    Type: String
+    Default: "testdb"
+### User Options ###
+  DBMasterUserName:
+    Type: String
+    Default: "root"
+    NoEcho: true
+    Description: DB master user name
+  DBPassword: 
+    Default: "DBPassword"
+    NoEcho: true
+    Type: String
+    Description: DB password
+### ACM Certificate ###
+  ACMCertificateId:
+    Type: String
+    Default: xxxxx-xxxxx-xxxxx-xxxxx
+    Description: ACM Certificate ID
+### ALB SSL Listener Policy ###
+  ALBSSLPolicy:
+    Type: String
+    Default: ELBSecurityPolicy-2016-08
+    Description: ALB SSL Listener Policy
+### Auto Scaling Policy ###
+  PredefinedMetricType:
+    Type: String
+    Description: "PredefinedMetricType. ALBRequestCountPerTarget | ASGAverageCPUUtilization | ASGAverageNetworkIn | ASGAverageNetworkOut"
+### Web ACl Scope ###
+  Scope:
+    Type: String
+    Default: REGIONAL
+    AllowedValues:
+      - REGIONAL
+      - CLOUDFRONT
+    Description: "Select in the scope of waf(REGIONAL or CLOUDFRONT)"
+### MyIP ###
+  MyIP:
+    Description: IP address allowed to access EC2
+    Type: String
+    Description: IP from My PC
+### Key pair ###
+  KeyName:
+    Description: EC2 Keyname
+    Type: 'AWS::EC2::KeyPair::KeyName'
+    Description: Key Pair
+
+### Resources ###
+Resources: 
+# VPC
+  VPC: 
+    Type: "AWS::EC2::VPC"
+    Properties: 
+      CidrBlock: !Ref VPCCIDR
+      EnableDnsSupport: "true"
+      EnableDnsHostnames: "true"
+      InstanceTenancy: default
+      Tags: 
+        - Key: Name
+          Value: !Sub "${PJPrefix}-vpc"
+# Internet Gateway
+  InternetGateway: 
+    Type: "AWS::EC2::InternetGateway"
+    Properties: 
+      Tags: 
+        - Key: Name
+          Value: !Sub "${PJPrefix}-igw"
+
+  IgwAttachment: 
+    Type: "AWS::EC2::VPCGatewayAttachment"
+    Properties: 
+      InternetGatewayId: !Ref InternetGateway
+      VpcId: !Ref VPC
+
+# Subnet
+### Public Subnet ###
+  PublicSubnetA: 
+    Type: "AWS::EC2::Subnet"
+    Properties: 
+      AvailabilityZone: "ap-northeast-1a"
+      CidrBlock: !Ref PublicSubnetCIDRA
+      VpcId: !Ref VPC 
+      Tags: 
+        - Key: Name
+          Value: !Sub "${PJPrefix}-public-subnet-a"
+
+  PublicSubnetC: 
+    Type: "AWS::EC2::Subnet"
+    Properties: 
+      AvailabilityZone: "ap-northeast-1c"
+      CidrBlock: !Ref PublicSubnetCIDRC
+      VpcId: !Ref VPC 
+      Tags: 
+        - Key: Name
+          Value: !Sub "${PJPrefix}-public-subnet-c"
+
+### Private Subnet ###
+  PrivateSubnetA: 
+    Type: "AWS::EC2::Subnet"
+    Properties: 
+      AvailabilityZone: "ap-northeast-1a"
+      CidrBlock: !Ref PrivateSubnetCIDRA
+      VpcId: !Ref VPC 
+      Tags: 
+        - Key: Name
+          Value: !Sub "${PJPrefix}-private-subnet-a"
+
+  PrivateSubnetC: 
+    Type: "AWS::EC2::Subnet"
+    Properties: 
+      AvailabilityZone: "ap-northeast-1c"
+      CidrBlock: !Ref PrivateSubnetCIDRC
+      VpcId: !Ref VPC 
+      Tags: 
+        - Key: Name
+          Value: !Sub "${PJPrefix}-private-subnet-c"
+
+# RouteTable
+### Public Subnet A Routing ###
+  PublicRTBA: 
+    Type: "AWS::EC2::RouteTable"
+    Properties: 
+      VpcId: !Ref VPC 
+      Tags: 
+        - Key: Name
+          Value: !Sub "${PJPrefix}-public-route-a"
+
+  PublicRouteA: 
+    Type: "AWS::EC2::Route"
+    Properties: 
+      RouteTableId: !Ref PublicRTBA
+      DestinationCidrBlock: "0.0.0.0/0"
+      GatewayId: !Ref InternetGateway
+
+  PublicSubnetRTBAssociationA: 
+    Type: "AWS::EC2::SubnetRouteTableAssociation"
+    Properties: 
+      SubnetId: !Ref PublicSubnetA 
+      RouteTableId: !Ref PublicRTBA
+
+### Public Subnet C Routing ###
+  PublicRTBC: 
+    Type: "AWS::EC2::RouteTable"
+    Properties: 
+      VpcId: !Ref VPC 
+      Tags: 
+        - Key: Name
+          Value: !Sub "${PJPrefix}-public-route-c"
+
+  PublicRouteC: 
+    Type: "AWS::EC2::Route"
+    Properties: 
+      RouteTableId: !Ref PublicRTBC
+      DestinationCidrBlock: "0.0.0.0/0"
+      GatewayId: !Ref InternetGateway
+
+  PublicSubnetRTBAssociationC: 
+    Type: "AWS::EC2::SubnetRouteTableAssociation"
+    Properties: 
+      SubnetId: !Ref PublicSubnetC
+      RouteTableId: !Ref PublicRTBC
+
+### Private Subnet A Routing ###
+  PrivateRTBA: 
+    Type: "AWS::EC2::RouteTable"
+    Properties: 
+      VpcId: !Ref VPC 
+      Tags: 
+        - Key: Name
+          Value: !Sub "${PJPrefix}-private-route-a"
+
+### Private Subnet C Routing ###
+  PrivateRTBC: 
+    Type: "AWS::EC2::RouteTable"
+    Properties: 
+      VpcId: !Ref VPC 
+      Tags: 
+        - Key: Name
+          Value: !Sub "${PJPrefix}-private-route-c"
+
+# Security Group
+### Web Server Security Group ###
+  WebPublicSG:
+    Type: "AWS::EC2::SecurityGroup"
+    Properties:
+      GroupDescription: web-public-sg
+      GroupName: WebPublicSG
+      VpcId: !Ref VPC
+      Tags: 
+        - Key: Name
+          Value: !Sub "${PJPrefix}-web-public-sg"
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort : 22
+          ToPort : 22
+          CidrIp: !Ref MyIP
+        - IpProtocol: tcp
+          FromPort : 80
+          ToPort : 80
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: tcp
+          FromPort : 443
+          ToPort : 443
+          CidrIp: 0.0.0.0/0
+      
+### ALB Security Group ###
+  AlbSG:
+    Type: "AWS::EC2::SecurityGroup"
+    Properties:
+      GroupDescription: alb-sg
+      GroupName: AlbSG
+      VpcId: !Ref VPC
+      Tags:
+        - Key: Name
+          Value: !Sub "${PJPrefix}-alb-sg"
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort : 80
+          ToPort : 80
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: tcp
+          FromPort : 443
+          ToPort : 443
+          CidrIp: 0.0.0.0/0
+            
+### RDS Server Security Group ###
+  RDSSG:
+    Type: "AWS::EC2::SecurityGroup"
+    Properties:
+      GroupDescription: rds-sg
+      GroupName: RDSSG
+      VpcId: !Ref VPC
+      Tags: 
+        - Key: Name
+          Value: !Sub "${PJPrefix}-rds-sg"
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort : 3306
+          ToPort : 3306
+          SourceSecurityGroupId: !Ref WebPublicSG
+
+### EFS Server Security Group ###
+  EFSSG:
+    Type: "AWS::EC2::SecurityGroup"
+    Properties:
+      GroupDescription: efs-sg
+      GroupName: EFSSG
+      VpcId: !Ref VPC
+      Tags: 
+        - Key: Name
+          Value: !Sub "${PJPrefix}-efs-sg"
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort : 2049
+          ToPort : 2049
+          SourceSecurityGroupId: !Ref WebPublicSG
+
+### Internal Security Group ###
+  InternalSG:
+    Type: "AWS::EC2::SecurityGroup"
+    Properties:
+      GroupDescription: internal-sg
+      GroupName: InternalSG
+      VpcId: !Ref VPC
+      Tags: 
+        - Key: Name
+          Value: !Sub "${PJPrefix}-internal-sg"
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 0
+          ToPort: 65535
+          CidrIp: 10.0.0.0/16
+
+# Instance
+### Web Instance Public 1a ###
+  WebInstance1A: 
+    Type: AWS::EC2::Instance
+    DependsOn: InternetGateway
+    Properties: 
+      ImageId: !Ref WebAMI
+      InstanceType: !Ref WebInstanceClass
+      KeyName: !Ref KeyName
+      BlockDeviceMappings:
+        - DeviceName: '/dev/xvda'
+          Ebs:
+            VolumeSize: !Ref WebStorageSize
+      NetworkInterfaces: 
+        - AssociatePublicIpAddress: "true"
+          DeviceIndex: "0"
+          SubnetId: !Ref PublicSubnetA
+          GroupSet: 
+            - !Ref WebPublicSG
+            - !Ref InternalSG
+      UserData:
+        Fn::Base64: !Join [
+          "",
+          [
+          "#!/bin/bash\n",
+          "yum -y update\n",
+          "yum -y install httpd\n",
+          "systemctl start httpd\n",
+          "systemctl enable httpd"
+          ]
+        ]
+      Tags:
+          - Key: Name
+            Value: !Sub "${PJPrefix}-web-public-1a"
+  WebInstance1AEIP:
+    Type: "AWS::EC2::EIP"
+    Properties:
+      Domain: vpc
+  WebInstance1AEIPAssociation:
+    Type: AWS::EC2::EIPAssociation
+    Properties:
+      InstanceId: !Ref WebInstance1A
+      EIP: !Ref WebInstance1AEIP
+
+# Target Group
+  TargetGroup:
+    Type: "AWS::ElasticLoadBalancingV2::TargetGroup"
+    Properties: 
+      VpcId: !Ref VPC 
+      Name: !Sub "${PJPrefix}-tg"
+      Protocol: HTTP
+      Port: 80
+      HealthCheckProtocol: HTTP
+      HealthCheckPath: "/healthcheck.html"
+      HealthCheckPort: "traffic-port"
+      HealthyThresholdCount: 2
+      UnhealthyThresholdCount: 2
+      HealthCheckTimeoutSeconds: 5
+      HealthCheckIntervalSeconds: 10
+      Matcher: 
+        HttpCode: 200
+      Tags: 
+        - Key: Name
+          Value: !Sub "${PJPrefix}-tg"
+      TargetGroupAttributes: 
+        - Key: "deregistration_delay.timeout_seconds"
+          Value: 300
+        - Key: "stickiness.enabled"
+          Value: false
+        - Key: "stickiness.type"
+          Value: lb_cookie
+        - Key: "stickiness.lb_cookie.duration_seconds"
+          Value: 86400
+      Targets: 
+        - Id: !Ref WebInstance1A
+        - Id: !Ref WebInstance1C
+          Port: 80
+
+# Application Load balancer
+  ### ALB ###
+  ALB: 
+    Type: "AWS::ElasticLoadBalancingV2::LoadBalancer"
+    Properties: 
+      Name: !Sub "${PJPrefix}-alb"
+      Scheme: "internet-facing"
+      LoadBalancerAttributes: 
+        - Key: "deletion_protection.enabled"
+          Value: false
+        - Key: "idle_timeout.timeout_seconds"
+          Value: 4000
+      SecurityGroups:
+        - !Ref AlbSG
+      Subnets: 
+        - !Ref PublicSubnetA
+        - !Ref PublicSubnetC
+
+### ALB Listener ###
+  ALBListenerHTTP: 
+    Type: "AWS::ElasticLoadBalancingV2::Listener"
+    Properties:
+      DefaultActions:
+        - RedirectConfig:
+            Port: 443
+            Protocol: HTTPS
+            StatusCode: HTTP_301
+          Type: redirect
+      LoadBalancerArn: !Ref ALB
+      Port: 80
+      Protocol: HTTP      
+  
+  ALBListenerHTTPS:
+    Type: "AWS::ElasticLoadBalancingV2::Listener"
+    Properties:
+      Certificates:
+        - CertificateArn: !Sub "arn:aws:acm:ap-northeast-1:${AWS::AccountId}:certificate/${ACMCertificateId}"
+      DefaultActions:
+        - TargetGroupArn: !Ref TargetGroup
+          Type: forward
+      LoadBalancerArn: !Ref ALB
+      Port: 443
+      Protocol: HTTPS
+      SslPolicy: !Ref ALBSSLPolicy
+  
+### WAF v2 ###
+  WebAcl:
+    Type: AWS::WAFv2::WebACL
+    Properties: 
+      Name: !Sub "${PJPrefix}-web-acl"
+      Scope: !Ref Scope
+      DefaultAction:
+        Block: {}
+      VisibilityConfig:
+        CloudWatchMetricsEnabled: true
+        SampledRequestsEnabled: true
+        MetricName: !Sub ${PJPrefix}-web-acl
+      Rules:
+        - Name: WAFIPsetRule
+          Priority: 0
+          Action:
+            Allow: {}
+          Statement:
+            IPSetReferenceStatement:
+              Arn: !GetAtt WAFIPSet.Arn
+          VisibilityConfig:
+            CloudWatchMetricsEnabled: true
+            SampledRequestsEnabled: true
+            MetricName: WAFIPsetRule
+        - Name: AWSManagedRulesCommonRuleSet
+          Priority: 1
+          Statement:
+            ManagedRuleGroupStatement:
+              VendorName: AWS
+              Name: AWSManagedRulesCommonRuleSet
+              ExcludedRules:
+                - Name: NoUserAgent_HEADER
+                - Name: UserAgent_BadBots_HEADER
+                - Name: SizeRestrictions_QUERYSTRING
+                - Name: SizeRestrictions_Cookie_HEADER
+                - Name: SizeRestrictions_BODY
+                - Name: SizeRestrictions_URIPATH
+                - Name: EC2MetaDataSSRF_BODY
+                - Name: EC2MetaDataSSRF_COOKIE
+                - Name: EC2MetaDataSSRF_URIPATH
+                - Name: EC2MetaDataSSRF_QUERYARGUMENTS
+                - Name: GenericLFI_QUERYARGUMENTS
+                - Name: GenericLFI_URIPATH
+                - Name: GenericLFI_BODY
+                - Name: RestrictedExtensions_URIPATH
+                - Name: RestrictedExtensions_QUERYARGUMENTS
+                - Name: GenericRFI_QUERYARGUMENTS
+                - Name: GenericRFI_BODY
+                - Name: GenericRFI_URIPATH
+                - Name: CrossSiteScripting_COOKIE
+                - Name: CrossSiteScripting_QUERYARGUMENTS
+                - Name: CrossSiteScripting_BODY
+                - Name: CrossSiteScripting_URIPATH
+          OverrideAction:
+            None: {}
+          VisibilityConfig:
+            CloudWatchMetricsEnabled: true
+            SampledRequestsEnabled: true
+            MetricName: AWSManagedRulesCommonRuleSet
+  WAFLogConfig:
+    Type: AWS::WAFv2::LoggingConfiguration
+    Properties:
+      LogDestinationConfigs:
+        - !GetAtt S3BucketForWaflog.Arn
+      ResourceArn: !GetAtt WebAcl.Arn
+  WebACLAssociation:
+    Type: AWS::WAFv2::WebACLAssociation
+    Properties:
+      ResourceArn: !Ref ALB
+      WebACLArn: !GetAtt WebAcl.Arn
+  WAFIPSet:
+    Type: AWS::WAFv2::IPSet
+    Properties:
+      Name: !Sub "${PJPrefix}-WAF-IPset"
+      Scope: !Ref Scope
+      IPAddressVersion: IPV4
+      Addresses:
+          - 10.0.0.0/16
+          - 192.168.0.0/24
+          - 1.1.1.0/32
+
+  ### S3 ###
+  S3BucketForWaflog:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub "aws-waf-logs-${PJPrefix}"
+      AccessControl: Private
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: True
+        BlockPublicPolicy: True
+        IgnorePublicAcls: True
+        RestrictPublicBuckets: True
+      Tags:
+        - Key: Name
+          Value: !Sub "aws-waf-logs-${PJPrefix}"
