@@ -105,11 +105,11 @@ Parameters:
     Type: String
     Default: XXXXXXXXXXXXX
     Description: Hosted zone ID on Route53
-### ROute53 Sub Domain ###
-  SubDomain:
+### ROute53 FQDN ###
+  FQDN:
     Type: String
     Default: example
-    Description: Sub domain name on Route53
+    Description: FQDN on Route53
 ### MyIP ###
   MyIP:
     Description: IP address allowed to access EC2
@@ -473,7 +473,7 @@ Resources:
   Route53RecordSet:
     Type: "AWS::Route53::RecordSet"
     Properties:
-      Name: !Sub '${SubDomain}'
+      Name: !Sub '${FQDN}'
       HostedZoneId: !Sub ${HostedZoneID}
       Type: "A"
       AliasTarget: 

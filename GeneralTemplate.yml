@@ -105,11 +105,11 @@ Parameters:
     Type: String
     Default: XXXXXXXXXXXXX
     Description: Hosted zone ID on Route53
-### ROute53 Sub Domain ###
-  SubDomain:
+### ROute53 FQDN ###
+  FQDN:
     Type: String
-    Default: example
-    Description: Sub domain name on Route53
+    Default: www.example.com
+    Description: FQDN on Route53
 ### MyIP ###
   MyIP:
     Description: IP address allowed to access EC2
@@ -774,16 +774,20 @@ Resources:
           - 192.168.0.0/24
           - 1.1.1.0/32
 
+###CloudFront###
+
+
+
 ### Route53 ###
-   Route53RecordSet:
-     Type: "AWS::Route53::RecordSet"
-     Properties:
-       Name: !Sub '${SubDomain}'
-       HostedZoneId: !Sub ${HostedZoneID}
-       Type: "A"
-       AliasTarget: 
-         HostedZoneId: !GetAtt 'ALB.CanonicalHostedZoneID'
-         DNSName: !GetAtt 'ALB.DNSName'
+  Route53RecordSet:
+    Type: "AWS::Route53::RecordSet"
+    Properties:
+      Name: !Sub '${FQDN}'
+      HostedZoneId: !Sub ${HostedZoneID}
+      Type: "A"
+      AliasTarget: 
+        HostedZoneId: !GetAtt 'ALB.CanonicalHostedZoneID'
+        DNSName: !GetAtt 'ALB.DNSName'
 
   ### S3 ###
   S3BucketForWaflog:
