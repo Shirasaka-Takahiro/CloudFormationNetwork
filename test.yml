@@ -422,7 +422,6 @@ Resources:
           Value: 86400
       Targets: 
         - Id: !Ref WebInstance1A
-        - Id: !Ref WebInstance1C
           Port: 80
 
 # Application Load balancer
@@ -471,109 +470,12 @@ Resources:
       SslPolicy: !Ref ALBSSLPolicy
 
 ### Route53 ###
-   Route53RecordSet:
+  Route53RecordSet:
     Type: "AWS::Route53::RecordSet"
     Properties:
       Name: !Sub '${SubDomain}'
       HostedZoneId: !Sub ${HostedZoneID}
       Type: "A"
       AliasTarget: 
-        HostedZoneId: !Sub ${HostedZoneID}
-        DNSName: !ImportValue ut-alb-dnsname
-
-
-### WAF v2 ###
-  WebAcl:
-    Type: AWS::WAFv2::WebACL
-    Properties: 
-      Name: !Sub "${PJPrefix}-web-acl"
-      Scope: !Ref Scope
-      DefaultAction:
-        Block: {}
-      VisibilityConfig:
-        CloudWatchMetricsEnabled: true
-        SampledRequestsEnabled: true
-        MetricName: !Sub ${PJPrefix}-web-acl
-      Rules:
-        - Name: WAFIPsetRule
-          Priority: 0
-          Action:
-            Allow: {}
-          Statement:
-            IPSetReferenceStatement:
-              Arn: !GetAtt WAFIPSet.Arn
-          VisibilityConfig:
-            CloudWatchMetricsEnabled: true
-            SampledRequestsEnabled: true
-            MetricName: WAFIPsetRule
-        - Name: AWSManagedRulesCommonRuleSet
-          Priority: 1
-          Statement:
-            ManagedRuleGroupStatement:
-              VendorName: AWS
-              Name: AWSManagedRulesCommonRuleSet
-              ExcludedRules:
-                - Name: NoUserAgent_HEADER
-                - Name: UserAgent_BadBots_HEADER
-                - Name: SizeRestrictions_QUERYSTRING
-                - Name: SizeRestrictions_Cookie_HEADER
-                - Name: SizeRestrictions_BODY
-                - Name: SizeRestrictions_URIPATH
-                - Name: EC2MetaDataSSRF_BODY
-                - Name: EC2MetaDataSSRF_COOKIE
-                - Name: EC2MetaDataSSRF_URIPATH
-                - Name: EC2MetaDataSSRF_QUERYARGUMENTS
-                - Name: GenericLFI_QUERYARGUMENTS
-                - Name: GenericLFI_URIPATH
-                - Name: GenericLFI_BODY
-                - Name: RestrictedExtensions_URIPATH
-                - Name: RestrictedExtensions_QUERYARGUMENTS
-                - Name: GenericRFI_QUERYARGUMENTS
-                - Name: GenericRFI_BODY
-                - Name: GenericRFI_URIPATH
-                - Name: CrossSiteScripting_COOKIE
-                - Name: CrossSiteScripting_QUERYARGUMENTS
-                - Name: CrossSiteScripting_BODY
-                - Name: CrossSiteScripting_URIPATH
-          OverrideAction:
-            None: {}
-          VisibilityConfig:
-            CloudWatchMetricsEnabled: true
-            SampledRequestsEnabled: true
-            MetricName: AWSManagedRulesCommonRuleSet
-  WAFLogConfig:
-    Type: AWS::WAFv2::LoggingConfiguration
-    Properties:
-      LogDestinationConfigs:
-        - !GetAtt S3BucketForWaflog.Arn
-      ResourceArn: !GetAtt WebAcl.Arn
-  WebACLAssociation:
-    Type: AWS::WAFv2::WebACLAssociation
-    Properties:
-      ResourceArn: !Ref ALB
-      WebACLArn: !GetAtt WebAcl.Arn
-  WAFIPSet:
-    Type: AWS::WAFv2::IPSet
-    Properties:
-      Name: !Sub "${PJPrefix}-WAF-IPset"
-      Scope: !Ref Scope
-      IPAddressVersion: IPV4
-      Addresses:
-          - 10.0.0.0/16
-          - 192.168.0.0/24
-          - 1.1.1.0/32
-
-  ### S3 ###
-  S3BucketForWaflog:
-    Type: AWS::S3::Bucket
-    Properties:
-      BucketName: !Sub "aws-waf-logs-${PJPrefix}"
-      AccessControl: Private
-      PublicAccessBlockConfiguration:
-        BlockPublicAcls: True
-        BlockPublicPolicy: True
-        IgnorePublicAcls: True
-        RestrictPublicBuckets: True
-      Tags:
-        - Key: Name
-          Value: !Sub "aws-waf-logs-${PJPrefix}"
+        HostedZoneId: !GetAtt 'ALB.CanonicalHostedZoneID'
+        DNSName: !GetAtt 'ALB.DNSName'
