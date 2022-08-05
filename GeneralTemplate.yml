@@ -825,18 +825,19 @@ Resources:
   Route53RecordSet:
     Type: "AWS::Route53::RecordSet"
     Properties:
-      Name: !Sub '${DomainName}'
-      HostedZoneId: !Sub ${HostedZoneID}
-      Type: "A"
-      AliasTarget: 
-        HostedZoneId: Z2FDTNDATAQYW2
-        DNSName: !GetAtt 'CloudFrontDistribution.DomainName'
-      Name: !Sub '${FQDN}'
-      HostedZoneId: !Sub ${HostedZoneID}
-      Type: "A"
-      AliasTarget: 
-        HostedZoneId: !GetAtt 'ALB.CanonicalHostedZoneID'
-        DNSName: !GetAtt 'ALB.DNSName'
+    RecordSets:
+    -  Name: !Sub '${DomainName}'
+       HostedZoneId: !Sub ${HostedZoneID}
+       Type: "A"
+       AliasTarget: 
+         HostedZoneId: Z2FDTNDATAQYW2
+         DNSName: !GetAtt 'CloudFrontDistribution.DomainName'
+    -  Name: !Sub '${FQDN}'
+       HostedZoneId: !Sub ${HostedZoneID}
+       Type: "A"
+       AliasTarget: 
+         HostedZoneId: !GetAtt 'ALB.CanonicalHostedZoneID'
+         DNSName: !GetAtt 'ALB.DNSName'
 
   ### S3 ###
   S3BucketForWaflog:
