@@ -100,6 +100,16 @@ Parameters:
       - REGIONAL
       - CLOUDFRONT
     Description: "Select in the scope of waf(REGIONAL or CLOUDFRONT)"
+### Route53 Hosted Zone ###
+  HostedZoneID: 
+    Type: String
+    Default: XXXXXXXXXXXXX
+    Description: Hosted zone ID on Route53
+### ROute53 Sub Domain ###
+  SubDomain:
+    Type: String
+    Default: example
+    Description: Sub domain name on Route53
 ### MyIP ###
   MyIP:
     Description: IP address allowed to access EC2
@@ -763,6 +773,17 @@ Resources:
           - 10.0.0.0/16
           - 192.168.0.0/24
           - 1.1.1.0/32
+
+### Route53 ###
+   Route53RecordSet:
+    Type: "AWS::Route53::RecordSet"
+    Properties:
+      Name: !Sub '${SubDomain}'
+      HostedZoneId: !Sub ${HostedZoneID}
+      Type: "A"
+      AliasTarget: 
+        HostedZoneId: !Sub ${HostedZoneID}
+        DNSName: !ImportValue ut-alb-dnsname
 
   ### S3 ###
   S3BucketForWaflog:
