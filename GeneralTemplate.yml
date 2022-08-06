@@ -111,15 +111,15 @@ Parameters:
     Default: XXXXXXXXXXXXX
     Description: Hosted zone ID on Route53
 ### Route53 Domain Name ###
-    DomainName:
+  HostedZoneName:
     Type: String
     Default: example.com
-    Description: Domain Name on Route53
-### Route53 FQDN ###
-  FQDN:
+    Description: Hosted zone name on Route53
+### Route53 FQDN for ALB ###
+  FQDNALB:
     Type: String
     Default: www.example.com
-    Description: FQDN on Route53
+    Description: FQDN for ALB on Route53
 ### MyIP ###
   MyIP:
     Description: IP address allowed to access EC2
@@ -791,14 +791,14 @@ Resources:
       DistributionConfig:
         PriceClass: PriceClass_All
         Aliases:
-        - !Sub "${DomainName}"
+        - !Sub "${HostedZoneName}"
         Origins:
         - CustomOriginConfig:
             OriginProtocolPolicy: http-only
-          DomainName: !Sub "${FQDN}"
-          Id: !Sub "${FQDN}"
+          DomainName: !Sub "${FQDNALB}"
+          Id: !Sub "${FQDNALB}"
         DefaultCacheBehavior:
-          TargetOriginId: !Sub "${FQDN}"
+          TargetOriginId: !Sub "${FQDNALB}"
           ViewerProtocolPolicy: redirect-to-https
           AllowedMethods:
           - GET
@@ -823,21 +823,20 @@ Resources:
 
 ### Route53 ###
   Route53RecordSet:
-    Type: "AWS::Route53::RecordSet"
+    Type: "AWS::Route53::RecordSetGroup"
     Properties:
-    RecordSets:
-    -  Name: !Sub '${DomainName}'
-       HostedZoneId: !Sub ${HostedZoneID}
-       Type: "A"
-       AliasTarget: 
-         HostedZoneId: Z2FDTNDATAQYW2
-         DNSName: !GetAtt 'CloudFrontDistribution.DomainName'
-    -  Name: !Sub '${FQDN}'
-       HostedZoneId: !Sub ${HostedZoneID}
-       Type: "A"
-       AliasTarget: 
-         HostedZoneId: !GetAtt 'ALB.CanonicalHostedZoneID'
-         DNSName: !GetAtt 'ALB.DNSName'
+      HostedZoneId: !Sub ${HostedZoneID}
+      RecordSets: 
+      - Name: !Sub "${HostedZoneName}"
+        Type: "A"
+        AliasTarget: 
+          HostedZoneId: Z2FDTNDATAQYW2
+          DNSName: !GetAtt "CloudFrontDistribution.DomainName"
+      - Name: !Sub "${FQDNALB}"
+        Type: "A"
+        AliasTarget: 
+          HostedZoneId: !GetAtt "ALB.CanonicalHostedZoneID"
+          DNSName: !GetAtt "ALB.DNSName"
 
   ### S3 ###
   S3BucketForWaflog:
