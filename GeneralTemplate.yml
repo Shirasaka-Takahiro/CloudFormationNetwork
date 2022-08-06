@@ -797,6 +797,9 @@ Resources:
             OriginProtocolPolicy: http-only
           DomainName: !Sub "${FQDNALB}"
           Id: !Sub "${FQDNALB}"
+        Logging:
+          IncludeCookies: "false"
+          Bucket: !Sub "${PJPrefix}-cf-accesslog-bucket.s3.ap-northeast-1.amazonaws.com"
         DefaultCacheBehavior:
           TargetOriginId: !Sub "${FQDNALB}"
           ViewerProtocolPolicy: redirect-to-https
@@ -852,3 +855,11 @@ Resources:
       Tags:
         - Key: Name
           Value: !Sub "aws-waf-logs-${PJPrefix}"
+  S3BucketForCFAccessLog:
+    Type: "AWS::S3::Bucket"
+    Properties:
+      BucketName: !Sub "${PJPrefix}-cf-accesslog-bucket"
+      AccessControl: LogDeliveryWrite
+      Tags:
+        - Key: Name
+          Value: !Sub "${PJPrefix}-cf-accesslog-bucket"
