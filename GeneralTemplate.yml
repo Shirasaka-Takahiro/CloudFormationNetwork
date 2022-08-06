@@ -120,6 +120,10 @@ Parameters:
     Type: String
     Default: www.example.com
     Description: FQDN for ALB on Route53
+### SNS Email ###
+  Email:
+    Type: String
+    Description: SNS Email    
 ### MyIP ###
   MyIP:
     Description: IP address allowed to access EC2
@@ -875,7 +879,7 @@ Resources:
           HostedZoneId: !GetAtt "ALB.CanonicalHostedZoneID"
           DNSName: !GetAtt "ALB.DNSName"
 
-  ### S3 ###
+### S3 ###
   S3BucketForWaflog:
     Type: AWS::S3::Bucket
     Properties:
@@ -897,3 +901,130 @@ Resources:
       Tags:
         - Key: Name
           Value: !Sub "${PJPrefix}-cf-accesslog-bucket"
+
+### SNS ###
+  Topics:
+    Type: AWS::SNS::Topic
+    Properties:
+      DisplayName: !Sub "${PJPrefix}-alert"
+      Subscription:
+        - Endpoint: !Ref Email
+          Protocol: email
+      TopicName: !Sub "${PJPrefix}-alert"
+
+# CloudWatch 
+### CPU ###
+  CPUAlarmWebInstance1A:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmActions:
+        - !Ref Topics
+      MetricName: CPUUtilization
+      Namespace: AWS/EC2
+      Statistic: Average
+      Period: '300'
+      EvaluationPeriods: '1'
+      Threshold: '80'
+      OKActions:
+        - !Ref Topics
+      ComparisonOperator: GreaterThanThreshold
+      Dimensions:
+        - Name: InstanceId
+          Value: !Ref WebInstance1A
+  
+  CPUAlarmWebInstance1C:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmActions:
+        - !Ref Topics
+      MetricName: CPUUtilization
+      Namespace: AWS/EC2
+      Statistic: Average
+      Period: '300'
+      EvaluationPeriods: '1'
+      Threshold: '80'
+      OKActions:
+        - !Ref Topics
+      ComparisonOperator: GreaterThanThreshold
+      Dimensions:
+        - Name: InstanceId
+          Value: !Ref WebInstance1C
+
+### ELB ###
+  UnHealthyHostCount:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmActions:
+        - !Ref Topics
+      AlarmName: !Join [ "-", [ !GetAtt ALB.LoadBalancerName, UnHealthyHostCount,  ] ]
+      MetricName: UnHealthyHostCount
+      Namespace: AWS/ApplicationELB
+      Statistic: Average
+      Period: '300'
+      EvaluationPeriods: '1'
+      Threshold: '0'
+      OKActions:
+        - !Ref Topics
+      ComparisonOperator: GreaterThanThreshold
+      Dimensions:
+        - Name: TargetGroup
+          Value: !GetAtt TargetGroup.TargetGroupFullName
+        - Name: LoadBalancer
+          Value: !GetAtt ApplicationLB.LoadBalancerFullName
+
+### RDS ###
+  CPUUtilizationRDS:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmActions:
+        - !Ref Topics
+      AlarmName: !Join [ "-", [ !Ref ProjectCode, CPUUtilization-RDS ] ]
+      MetricName: CPUUtilization
+      Namespace: AWS/RDS
+      Statistic: Average
+      Period: '300'
+      EvaluationPeriods: '1'
+      Threshold: '80'
+      OKActions:
+        - !Ref Topics
+      ComparisonOperator: GreaterThanThreshold
+      Dimensions:
+        - Name: DBInstanceIdentifier
+          Value: !Ref DBInstance
+
+  FreeableMemoryRDS:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmActions:
+        - !Ref Topics
+      AlarmName: !Join [ "-", [ !Ref ProjectCode, FreeableMemory-RDS ] ]
+      MetricName: FreeableMemory
+      Namespace: AWS/RDS
+      Statistic: Average
+      Period: '300'
+      EvaluationPeriods: '1'
+      Threshold: '41943040'
+      OKActions:
+        - !Ref Topics
+      ComparisonOperator: LessThanThreshold
+      Dimensions:
+        - Name: DBInstanceIdentifier
+          Value: !Ref DBInstance
+
+  FreeableStorageRDS:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmActions:
+        - !Ref Topics
+      MetricName: FreeStorageSpace
+      Namespace: AWS/RDS
+      Statistic: Average
+      Period: '300'
+      EvaluationPeriods: '1'
+      Threshold: '21474836480'
+      OKActions:
+        - !Ref Topics
+      ComparisonOperator: LessThanThreshold
+      Dimensions:
+        - Name: DBInstanceIdentifier
+          Value: !Ref DBInstance
