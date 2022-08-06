@@ -404,6 +404,8 @@ Resources:
       Tags:
           - Key: Name
             Value: !Sub "${PJPrefix}-web-public-1a"
+          - Key: DLM_tag
+            Value: !Sub "${PJPrefix}-DLM-storage"
   WebInstance1AEIP:
     Type: "AWS::EC2::EIP"
     Properties:
@@ -460,6 +462,8 @@ Resources:
       Tags:
           - Key: Name
             Value: !Sub "${PJPrefix}-web-Public-1c"
+          - Key: DLM_tag
+            Value: !Sub "${PJPrefix}-DLM-storage"
   WebInstance1CEIP:
     Type: "AWS::EC2::EIP"
     Properties:
@@ -469,6 +473,36 @@ Resources:
     Properties:
       InstanceId: !Ref WebInstance1C
       EIP: !Ref WebInstance1CEIP
+
+### DLM ###
+  DLM:
+    Type: "AWS::DLM::LifecyclePolicy"
+    Properties:
+      Description: "Daily EBS Snapshot"
+      State: "ENABLED"
+      ExecutionRoleArn: !Sub "arn:aws:iam::${AWS::AccountId}:role/AWSDataLifecycleManagerDefaultRole"
+      PolicyDetails:
+        ResourceTypes:
+          - "VOLUME"
+        TargetTags:
+          -
+            Key: "Name"
+            Value: !Sub "${PJPrefix}-DLM-storage"
+        Schedules:
+          -
+            Name: !Sub "${PJPrefix}-daily-snapshot"
+            TagsToAdd:
+              -
+                Key: "type"
+                Value: "DailySnapshot"
+            CreateRule:
+              Interval: 24
+              IntervalUnit: "HOURS"
+              Times:
+                - "09:00"
+            RetainRule:
+              Count: 7
+            CopyTags: true
 
 ### RDS Instance ###
   DBInstance: 
