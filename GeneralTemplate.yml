@@ -1,5 +1,5 @@
 AWSTemplateFormatVersion: "2010-09-09"
-Description: Template-EC2-RDS-ALB-EFS-AutoScaling-WAF
+Description: General Template for EC2,RDS,ALB,EFS,AutoScaling,CloudFront,S3,Route53,WAF
 
 
 # Input Parameters
