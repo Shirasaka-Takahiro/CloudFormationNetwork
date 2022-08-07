@@ -96,7 +96,7 @@ Parameters:
 ### Auto Scaling Policy ###
   PredefinedMetricType:
     Type: String
-    Description: "PredefinedMetricType. ALBRequestCountPerTarget | ASGAverageCPUUtilization | ASGAverageNetworkIn | ASGAverageNetworkOut"
+    Description: "PredefinedMetricType. ASGAverageCPUUtilization | ASGAverageNetworkIn | ASGAverageNetworkOut"
 ### Web ACl Scope ###
   Scope:
     Type: String
